@@ -11,7 +11,7 @@ import { AuthService } from './auth.service';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 
 @Controller('auth')
-@ApiTags('auth') // Agregar etiquetas de Swagger
+@ApiTags('auth') 
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
@@ -31,10 +31,17 @@ export class AuthController {
         password,
         fullName,
       );
-      return userRecord;
+      return {
+        statusCode: 201,
+        message: 'Usuario creado con éxito',
+        user: userRecord,
+      };
     } catch (error) {
       throw new HttpException(
-        { message: error.message },
+        {
+          message: error.message,
+          statusCode: HttpStatus.BAD_REQUEST,
+        },
         HttpStatus.BAD_REQUEST,
       );
     }
@@ -42,20 +49,21 @@ export class AuthController {
 
   // Ruta de inicio de sesión
   @Post('login')
-  @ApiOperation({ summary: 'Iniciar sesión con token' })
-  @ApiResponse({ status: 200, description: 'Inicio de sesión exitoso' })
-  @ApiResponse({ status: 400, description: 'Error de autenticación' })
-  async login(@Body('idToken') idToken: string) {
-    try {
-      const decodedToken = await this.authService.verifyIdToken(idToken);
-      return { message: 'Inicio de sesión exitoso', user: decodedToken };
-    } catch (error) {
-      throw new HttpException(
-        { message: error.message },
-        HttpStatus.BAD_REQUEST,
-      );
-    }
+@ApiOperation({ summary: 'Iniciar sesión con token' })
+@ApiResponse({ status: 200, description: 'Inicio de sesión exitoso' })
+@ApiResponse({ status: 400, description: 'Error de autenticación' })
+async login(@Body('idToken') idToken: string) {
+  try {
+    const decodedToken = await this.authService.verifyIdToken(idToken);
+    return { message: 'Inicio de sesión exitoso', user: decodedToken };
+  } catch (error) {
+    throw new HttpException(
+      { message: error.message },
+      HttpStatus.BAD_REQUEST,
+    );
   }
+}
+
 
   // Ruta para obtener la información del usuario autenticado
   @Get('user-info')
@@ -79,7 +87,10 @@ export class AuthController {
       };
     } catch (error) {
       throw new HttpException(
-        { message: 'Error al obtener información del usuario' },
+        {
+          message: 'Error al obtener información del usuario',
+          error: error.message,
+        },
         HttpStatus.BAD_REQUEST,
       );
     }
@@ -99,10 +110,17 @@ export class AuthController {
   async resetPassword(@Body('email') email: string) {
     try {
       const response = await this.authService.resetPassword(email);
-      return response;
+      return {
+        statusCode: 200,
+        message: 'Recuperación de contraseña solicitada',
+        data: response,
+      };
     } catch (error) {
       throw new HttpException(
-        { message: error.message },
+        {
+          message: error.message,
+          statusCode: HttpStatus.BAD_REQUEST,
+        },
         HttpStatus.BAD_REQUEST,
       );
     }

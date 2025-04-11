@@ -1,41 +1,77 @@
-import { Controller, Get, Param, Put, Body, NotFoundException } from '@nestjs/common';
-
+import { Controller, Get, Post, Delete, Put, Body, Param, NotFoundException, HttpException, HttpStatus } from '@nestjs/common';
+import { RolesService, RoleData } from './roles.service';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
-import { PermissionsService } from 'src/permissions/permissions.service';
 
 @ApiTags('Roles')
 @Controller('roles')
 export class RolesController {
-  constructor(private readonly permissionsService: PermissionsService) {}
+  constructor(private readonly rolesService: RolesService) {}
+
+  @Get()
+  @ApiOperation({ summary: 'Obtener todos los roles' })
+  @ApiResponse({ status: 200, description: 'Roles obtenidos correctamente' })
+  async getAllRoles() {
+    try {
+      return await this.rolesService.getAllRoles();
+    } catch (error) {
+      throw new HttpException(error.message, HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+  }
+
+  @Post()
+  @ApiOperation({ summary: 'Crear un nuevo rol' })
+  @ApiResponse({ status: 201, description: 'Rol creado correctamente' })
+  @ApiResponse({ status: 400, description: 'Error al crear rol' })
+  async createRole(@Body() roleData: RoleData) {
+    try {
+      return await this.rolesService.createRole(roleData);
+    } catch (error) {
+      throw new HttpException(error.message, HttpStatus.BAD_REQUEST);
+    }
+  }
+
+  @Delete(':role')
+  @ApiOperation({ summary: 'Eliminar un rol por ID' })
+  @ApiParam({ name: 'role', description: 'ID del rol a eliminar' })
+  @ApiResponse({ status: 200, description: 'Rol eliminado correctamente' })
+  @ApiResponse({ status: 404, description: 'Rol no encontrado' })
+  async deleteRole(@Param('role') role: string) {
+    try {
+      await this.rolesService.deleteRole(role);
+      return { message: 'Rol eliminado correctamente' };
+    } catch (error) {
+      throw new NotFoundException(error.message);
+    }
+  }
 
   @Get(':role/permissions')
   @ApiOperation({ summary: 'Obtener permisos de un rol específico' })
-  @ApiParam({ name: 'role', description: 'El rol del cual se obtendrán los permisos' })
+  @ApiParam({ name: 'role', description: 'Nombre del rol para obtener permisos' })
   @ApiResponse({ status: 200, description: 'Permisos obtenidos correctamente' })
   @ApiResponse({ status: 404, description: 'Rol no encontrado' })
-  async getPermissions(@Param('role') role: string) {
+  async getRolePermissions(@Param('role') role: string) {
     try {
-      const permissions = await this.permissionsService.getPermissionsForRole(role);
+      const permissions = await this.rolesService.getRolePermissions(role);
       return { role, permissions };
     } catch (error) {
-      throw new NotFoundException(`Error al obtener permisos: ${error.message}`);
+      throw new NotFoundException(error.message);
     }
   }
 
   @Put(':role/permissions')
   @ApiOperation({ summary: 'Actualizar permisos de un rol específico' })
-  @ApiParam({ name: 'role', description: 'El rol al cual se actualizarán los permisos' })
+  @ApiParam({ name: 'role', description: 'Nombre del rol a actualizar permisos' })
   @ApiResponse({ status: 200, description: 'Permisos actualizados correctamente' })
   @ApiResponse({ status: 404, description: 'Rol no encontrado' })
-  async updatePermissions(
+  async updateRolePermissions(
     @Param('role') role: string,
-    @Body() permissions: string[],
+    @Body('permissions') permissions: string[],
   ) {
     try {
-      const updatedPermissions = await this.permissionsService.updatePermissionsForRole(role, permissions);
+      const updatedPermissions = await this.rolesService.updateRolePermissions(role, permissions);
       return { role, updatedPermissions };
     } catch (error) {
-      throw new NotFoundException(`Error al actualizar permisos: ${error.message}`);
+      throw new NotFoundException(error.message);
     }
   }
 }

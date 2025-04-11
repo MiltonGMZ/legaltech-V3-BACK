@@ -20,38 +20,39 @@ export class AuthService {
   // Registrar un nuevo usuario
   async register(email: string, password: string, fullName: string) {
     try {
-      try {
-        await admin.auth().getUserByEmail(email);
+      // Verificar si el email ya está registrado
+      const existingUser = await admin.auth().getUserByEmail(email).catch(() => null);
+      if (existingUser) {
         throw new Error('El email ya está registrado');
-      } catch (error) {
-        if (error.code !== 'auth/user-not-found') {
-          throw new Error(`Error al verificar el usuario: ${error.message}`);
-        }
       }
 
+      // Crear el nuevo usuario en Firebase Auth
       const userRecord = await admin.auth().createUser({
         email,
         password,
         displayName: fullName,
       });
 
+      // Crear el objeto de datos para Firestore
       const userData = {
         uid: userRecord.uid,
         email: userRecord.email,
-        fullName: fullName,
-        role: 'usuario',  
+        fullName,
+        role: 'usuario',
         createdAt: new Date(),
       };
 
+      // Guardar el usuario en Firestore
       const { docId } = await this.firebaseService.addDocument('users', userData);
 
+      // Crear un token personalizado para el usuario
       const idToken = await admin.auth().createCustomToken(userRecord.uid);
 
-      return { 
-        message: 'Usuario creado con éxito', 
-        userRecord, 
-        idToken,  
-        docId    
+      return {
+        message: 'Usuario creado con éxito',
+        userRecord,
+        idToken,
+        docId,
       };
     } catch (error) {
       throw new Error(`Error al crear el usuario: ${error.message}`);
@@ -98,21 +99,31 @@ export class AuthService {
     }
   }
 
+  // Verificar permisos de un usuario
   async hasPermission(userId: string, requiredPermission: string): Promise<boolean> {
-    const firestore = this.firebaseService.getFirestore();
-    const userDoc = await firestore.collection('users').doc(userId).get();
-    if (!userDoc.exists) return false;
-  
-    const userData = userDoc.data();
-    const role = userData?.role;
-  
-    if (!role) return false;
-  
-    // Obtené los permisos para ese rol
-    const permissions = await this.permissionsService.getPermissionsForRole(role);
-  
-    return permissions.includes(requiredPermission);
+    try {
+      const firestore = this.firebaseService.getFirestore();
+      const userDoc = await firestore.collection('users').doc(userId).get();
+      if (!userDoc.exists) {
+        throw new Error(`Usuario con id ${userId} no encontrado`);
+      }
+
+      const userData = userDoc.data();
+      const role = userData?.role;
+
+      if (!role) {
+        throw new Error(`El usuario no tiene un rol asignado`);
+      }
+
+      // Obtener los permisos asociados al rol del usuario
+      const permissions = await this.permissionsService.getPermissionsForRole(role);
+
+      return permissions.includes(requiredPermission);
+    } catch (error) {
+      throw new Error(`Error al verificar permisos: ${error.message}`);
+    }
   }
+
   
   
 }

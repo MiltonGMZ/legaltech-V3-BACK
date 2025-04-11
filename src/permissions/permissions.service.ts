@@ -1,77 +1,37 @@
 import { Injectable } from '@nestjs/common';
+import { FirebaseService } from 'src/firebase/firebase.service';
 
 @Injectable()
 export class PermissionsService {
-  private readonly rolePermissions = {
-    administrador: [
-      "crear_usuarios",
-      "editar_usuarios",
-      "eliminar_usuarios",
-      "ver_usuarios",
-      "acceso_dashboard",
-      "asignar_casos",
-      "ver_casos",
-      "ver_mis_casos",
-      "actualizar_casos",
-      "crear_casos",
-      "actualizar_perfil",
-      "finalizar_casos",
-      "crear_usuario",
-      "editar_usuario",
-      "eliminar_usuario",
-      "crear_preconsulta"
-    ],
-    abogado: [
-      "ver_usuarios",
-      "ver_casos",
-      "ver_mis_casos",
-      "crear_casos",
-      "actualizar_casos",
-      "actualizar_perfil",
-      "finalizar_casos",
-      "crear_preconsulta",
-      "crear_usuario",
-      "editar_usuario"
-    ],
-    coordinador: [
-      "asignar_casos",
-      "ver_casos",
-      "ver_mis_casos",
-      "actualizar_casos",
-      "crear_casos",
-      "actualizar_perfil",
-      "finalizar_casos",
-      "crear_usuario",
-      "editar_usuario",
-      "eliminar_usuario"
-    ],
-    usuario: [
-      "ver_casos",
-      "ver_mis_casos",
-      "actualizar_perfil"
-    ],
-    aprendiz: [
-      "ver_casos",
-      "ver_mis_casos"
-    ]
-  };
+  constructor(private readonly firebaseService: FirebaseService) {}
 
-  // Obtiene los permisos de un rol específico
+  // Obtiene los permisos de un rol específico desde Firestore
   async getPermissionsForRole(role: string): Promise<string[]> {
-    const permissions = this.rolePermissions[role];
-    if (!permissions) {
-      throw new Error(`No se encontraron permisos para el rol: ${role}`);
+    try {
+      const roleDoc = await this.firebaseService.getDocuments('roles', 'role', role);
+      
+      if (roleDoc.length === 0) {
+        throw new Error(`No se encontró el rol: ${role}`);
+      }
+      
+      // Asumiendo que el documento contiene un array de permisos
+      const permissions = roleDoc[0].permisos || [];
+      return permissions;
+    } catch (error) {
+      console.error('Error al obtener permisos para el rol:', error);
+      throw new Error(`No se pudieron obtener los permisos para el rol: ${role}`);
     }
-    return permissions;
   }
 
-  // Actualiza los permisos de un rol
+  // Actualiza los permisos de un rol específico
   async updatePermissionsForRole(role: string, permissions: string[]): Promise<string[]> {
-    if (!this.rolePermissions[role]) {
-      throw new Error(`No se encontró el rol: ${role}`);
+    try {
+      // Aquí accedes a Firestore para actualizar los permisos del rol
+      await this.firebaseService.updateDocument('roles', role, { permisos: permissions });
+      return permissions;
+    } catch (error) {
+      console.error('Error al actualizar permisos para el rol:', error);
+      throw new Error(`No se pudieron actualizar los permisos para el rol: ${role}`);
     }
-
-    this.rolePermissions[role] = permissions;
-    return this.rolePermissions[role];
   }
 }

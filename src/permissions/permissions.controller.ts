@@ -2,7 +2,7 @@ import { Controller, Get, Put, Body, Param, NotFoundException } from '@nestjs/co
 import { PermissionsService } from './permissions.service';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
 
-@ApiTags('Permissions') 
+@ApiTags('Permissions')
 @Controller('permissions')
 export class PermissionsController {
   constructor(private readonly permissionsService: PermissionsService) {}
@@ -15,9 +15,12 @@ export class PermissionsController {
   async getPermissions(@Param('role') role: string) {
     try {
       const permissions = await this.permissionsService.getPermissionsForRole(role);
+      if (!permissions || permissions.length === 0) {
+        throw new NotFoundException(`No se encontraron permisos para el rol: ${role}`);
+      }
       return { role, permissions };
     } catch (error) {
-      throw new NotFoundException(`No se encontraron permisos para el rol: ${role}`);
+      throw new NotFoundException(`No se pudieron obtener los permisos para el rol: ${role}. Error: ${error.message}`);
     }
   }
 
@@ -31,10 +34,16 @@ export class PermissionsController {
     @Body() permissions: string[],
   ) {
     try {
+      // Verifica que el rol exista antes de actualizar los permisos
+      const existingRole = await this.permissionsService.getPermissionsForRole(role);
+      if (!existingRole) {
+        throw new NotFoundException(`El rol ${role} no existe en la base de datos`);
+      }
+
       const updatedPermissions = await this.permissionsService.updatePermissionsForRole(role, permissions);
       return { role, updatedPermissions };
     } catch (error) {
-      throw new NotFoundException(`No se pudo actualizar los permisos para el rol: ${role}`);
+      throw new NotFoundException(`No se pudo actualizar los permisos para el rol: ${role}. Error: ${error.message}`);
     }
   }
 }

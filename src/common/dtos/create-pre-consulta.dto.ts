@@ -1,0 +1,91 @@
+import { IsNotEmpty, IsEmail, IsString, IsOptional, IsBoolean, IsDateString, IsEnum } from 'class-validator';
+
+export class CreatePreConsultaDto {
+  @IsNotEmpty()
+  @IsString()
+  tipoInvolucrado: string;
+
+  @IsNotEmpty()
+  @IsString()
+  tipoDocumento: string;
+
+  @IsNotEmpty()
+  @IsString()
+  nombres: string;
+
+  @IsNotEmpty()
+  @IsString()
+  apellidos: string;
+
+  @IsNotEmpty()
+  @IsString()
+  numeroIdentificacion: string;
+
+  @IsNotEmpty()
+  @IsDateString()
+  fechaNacimiento: string;  // Aquí se espera que la fecha esté en formato ISO 8601
+
+  @IsNotEmpty()
+  @IsString()
+  genero: string;
+
+  @IsNotEmpty()
+  @IsEmail()
+  correo: string;
+
+  @IsNotEmpty()
+  @IsString()
+  country: string;
+
+  @IsNotEmpty()
+  @IsString()
+  province: string;
+
+  @IsNotEmpty()
+  @IsString()
+  city: string;
+
+  @IsOptional()
+  @IsString()
+  discapacidad?: string;
+
+  @IsOptional()
+  @IsString()
+  etnia?: string;
+
+  @IsOptional()
+  @IsString()
+  desplazado?: string;
+
+  @IsOptional()
+  @IsString()
+  otro?: string;
+
+  @IsNotEmpty()
+  @IsString()
+  hechos: string;
+
+  @IsNotEmpty()
+  @IsString()
+  pretenciones: string;
+
+  @IsNotEmpty()
+  @IsBoolean()
+  autorizaDatos: boolean;
+
+  @IsOptional()
+  @IsDateString()
+  fechaCreacion?: string;
+
+  @IsOptional()
+  @IsString()
+  userId?: string;
+
+  @IsOptional()
+  @IsString()
+  estado?: string;
+
+  @IsNotEmpty()
+  @IsString()
+  tipo: string;
+}

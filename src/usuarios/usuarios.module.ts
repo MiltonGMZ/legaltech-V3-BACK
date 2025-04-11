@@ -1,0 +1,11 @@
+import { Module } from '@nestjs/common';
+import { UsuariosService } from './usuarios.service';
+import { UsuariosController } from './usuarios.controller';
+import { FirebaseModule } from 'src/firebase/firebase.module';
+
+@Module({
+  imports: [FirebaseModule],
+  controllers: [UsuariosController],
+  providers: [UsuariosService],
+})
+export class UsuariosModule {}

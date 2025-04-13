@@ -1,13 +1,14 @@
 import { Injectable } from '@nestjs/common';
 import * as admin from 'firebase-admin';
 import { FirebaseService } from 'src/firebase/firebase.service';
-import { PermissionsService } from 'src/permissions/permissions.service';
+import { RolesService } from 'src/roles/roles.service';
+
 
 @Injectable()
 export class AuthService {
   constructor(
     private readonly firebaseService: FirebaseService,
-    private readonly permissionsService: PermissionsService,
+    private readonly rolesService: RolesService
   ) {
     if (!admin.apps.length) {
       admin.initializeApp({
@@ -100,30 +101,30 @@ export class AuthService {
     }
   }
 
-  // Verificar permisos de un usuario
-  async hasPermission(userId: string, requiredPermission: string): Promise<boolean> {
-    try {
-      const firestore = this.firebaseService.getFirestore();
-      const userDoc = await firestore.collection('users').doc(userId).get();
-      if (!userDoc.exists) {
-        throw new Error(`Usuario con id ${userId} no encontrado`);
-      }
-
-      const userData = userDoc.data();
-      const role = userData?.role;
-
-      if (!role) {
-        throw new Error(`El usuario no tiene un rol asignado`);
-      }
-
-      // Obtener los permisos asociados al rol del usuario
-      const permissions = await this.permissionsService.getPermissionsForRole(role);
-
-      return permissions.includes(requiredPermission);
-    } catch (error) {
-      throw new Error(`Error al verificar permisos: ${error.message}`);
+// Verificar permisos de un usuario
+async hasPermission(userId: string, requiredPermission: string): Promise<boolean> {
+  try {
+    const firestore = this.firebaseService.getFirestore();
+    const userDoc = await firestore.collection('users').doc(userId).get();
+    if (!userDoc.exists) {
+      throw new Error(`Usuario con id ${userId} no encontrado`);
     }
+
+    const userData = userDoc.data();
+    const role = userData?.role;
+
+    if (!role) {
+      throw new Error(`El usuario no tiene un rol asignado`);
+    }
+
+    // Obtener los permisos asociados al rol del usuario desde RolesService
+    const permissions = await this.rolesService.getRolePermissions(role);
+
+    return permissions.includes(requiredPermission);
+  } catch (error) {
+    throw new Error(`Error al verificar permisos: ${error.message}`);
   }
+}
 
   
   

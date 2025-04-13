@@ -8,16 +8,15 @@ export class RolesController {
   constructor(private readonly rolesService: RolesService) {}
 
   @Get()
-@ApiOperation({ summary: 'Obtener todos los roles' })
-@ApiResponse({ status: 200, description: 'Roles obtenidos correctamente' })
-async getAllRoles() {
-  try {
-    return await this.rolesService.getAllRoles();
-  } catch (error) {
-    throw new HttpException(error.message, HttpStatus.INTERNAL_SERVER_ERROR);
+  @ApiOperation({ summary: 'Obtener todos los roles' })
+  @ApiResponse({ status: 200, description: 'Roles obtenidos correctamente' })
+  async getAllRoles() {
+    try {
+      return await this.rolesService.getAllRoles();
+    } catch (error) {
+      throw new HttpException(error.message, HttpStatus.INTERNAL_SERVER_ERROR);
+    }
   }
-}
-
 
   @Post()
   @ApiOperation({ summary: 'Crear un nuevo rol' })
@@ -45,21 +44,19 @@ async getAllRoles() {
     }
   }
 
-
-@Get(':role/permissions')
-@ApiOperation({ summary: 'Obtener permisos de un rol específico' })
-@ApiParam({ name: 'role', description: 'Nombre del rol para obtener permisos' })
-@ApiResponse({ status: 200, description: 'Permisos obtenidos correctamente' })
-@ApiResponse({ status: 404, description: 'Rol no encontrado' })
-async getRolePermissions(@Param('role') role: string) {
-  try {
-    const permissions = await this.rolesService.getRolePermissions(role);
-    return { role, permissions };
-  } catch (error) {
-    throw new NotFoundException(error.message);
+  @Get(':role/permissions')
+  @ApiOperation({ summary: 'Obtener permisos de un rol específico' })
+  @ApiParam({ name: 'role', description: 'Nombre del rol para obtener permisos' })
+  @ApiResponse({ status: 200, description: 'Permisos obtenidos correctamente' })
+  @ApiResponse({ status: 404, description: 'Rol no encontrado' })
+  async getRolePermissions(@Param('role') role: string) {
+    try {
+      const permissions = await this.rolesService.getRolePermissions(role);
+      return { role, permissions };
+    } catch (error) {
+      throw new NotFoundException(error.message);
+    }
   }
-}
-
 
   @Put(':role/permissions')
   @ApiOperation({ summary: 'Actualizar permisos de un rol específico' })

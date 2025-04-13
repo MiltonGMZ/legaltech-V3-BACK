@@ -5,11 +5,10 @@ import { FirebaseModule } from './firebase/firebase.module';
 import { ConsultasModule } from './consultas/consultas.module';
 import { AuthModule } from './auth/auth.module';
 import { RolesModule } from './roles/roles.module';
-import { PermissionsModule } from './permissions/permissions.module';
 import { UsuariosModule } from './usuarios/usuarios.module';
 
 @Module({
-  imports: [FirebaseModule, ConsultasModule, AuthModule, RolesModule, PermissionsModule, UsuariosModule],
+  imports: [FirebaseModule, ConsultasModule, AuthModule, RolesModule, UsuariosModule],
   controllers: [AppController],
   providers: [AppService],
 })

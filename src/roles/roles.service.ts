@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { FirebaseService } from '../firebase/firebase.service';
-import { PermissionsService } from '../permissions/permissions.service';
+import { AuthService } from 'src/auth/auth.service';
+
 
 export interface RoleData {
   id: string;
@@ -11,7 +12,6 @@ export interface RoleData {
 export class RolesService {
   constructor(
     private readonly firebaseService: FirebaseService,
-    private readonly permissionsService: PermissionsService,
   ) {}
 
   // Obtener todos los roles desde Firestore

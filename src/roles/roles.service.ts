@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { FirebaseService } from '../firebase/firebase.service';
 import { PermissionsService } from '../permissions/permissions.service';
 
@@ -15,18 +15,34 @@ export class RolesService {
     private readonly permissionsService: PermissionsService,
   ) {}
 
-  // Obtener todos los roles desde Firestore
-  async getAllRoles(): Promise<RoleData[]> {
-    try {
-      // Asumimos que 'roles' es la colección y que contiene un campo 'permisos'
-      const roles = await this.firebaseService.getDocuments('roles', 'name', ''); 
-      return roles.map(role => ({
-        permisos: role.permisos || [], // Devuelve solo el array de permisos
-      }));
-    } catch (error) {
-      throw new Error(`Error al obtener roles: ${error.message}`);
-    }
+  async getAllRoles() {
+    const snapshot = await this.firebaseService
+      .getFirestore()
+      .collection('roles')
+      .get();
+    
+    // Mapeamos los documentos obtenidos y los retornamos
+    return snapshot.docs.map((doc) => ({
+      id: doc.id,  // id del documento (lo usas para identificar cada rol)
+      permisos: doc.data().permisos || []  // Obtenemos los permisos asociados al rol
+    }));
   }
+
+
+  async getRoleById(roleId: string) {
+    const doc = await this.firebaseService.getFirestore()
+      .collection('roles')
+      .doc(roleId)
+      .get();
+    
+    if (!doc.exists) {
+      throw new NotFoundException('Rol no encontrado');
+    }
+  
+    return { id: doc.id, permisos: doc.data().permisos || [] };
+  }
+  
+  
 
   // Crear un nuevo rol
   async createRole(roleData: RoleData): Promise<any> {

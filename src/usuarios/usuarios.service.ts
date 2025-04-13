@@ -13,7 +13,6 @@ export class UsuariosService {
       .getFirestore()
       .collection('users')
       .get();
-
     return snapshot.docs.map((doc) => ({ uid: doc.id, ...doc.data() }));
   }
 

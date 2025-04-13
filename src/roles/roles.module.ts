@@ -6,8 +6,8 @@ import { PermissionsService } from '../permissions/permissions.service';
 import { PermissionsModule } from 'src/permissions/permissions.module';
 
 @Module({
-  imports: [PermissionsModule],
-  controllers: [RolesController],
+  imports: [PermissionsModule], 
+  controllers: [RolesController], 
   providers: [RolesService, FirebaseService, PermissionsService],
 })
 export class RolesModule {}

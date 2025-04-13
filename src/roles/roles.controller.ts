@@ -59,19 +59,14 @@ export class RolesController {
   }
 
   @Put(':role/permissions')
-  @ApiOperation({ summary: 'Actualizar permisos de un rol específico' })
-  @ApiParam({ name: 'role', description: 'Nombre del rol a actualizar permisos' })
-  @ApiResponse({ status: 200, description: 'Permisos actualizados correctamente' })
-  @ApiResponse({ status: 404, description: 'Rol no encontrado' })
-  async updateRolePermissions(
-    @Param('role') role: string,
-    @Body('permissions') permissions: string[],
-  ) {
-    try {
-      const updatedPermissions = await this.rolesService.updateRolePermissions(role, permissions);
-      return { role, updatedPermissions };
-    } catch (error) {
-      throw new NotFoundException(error.message);
-    }
+async updateRolePermissions(@Param('role') role: string, @Body() permissions: { permisos: string[] }) {
+  try {
+    
+    await this.rolesService.updateRolePermissions(role, permissions.permisos);
+    return { role, updatedPermissions: permissions.permisos };
+  } catch (error) {
+    throw new HttpException('Error al actualizar permisos', HttpStatus.INTERNAL_SERVER_ERROR);
   }
+}
+
 }

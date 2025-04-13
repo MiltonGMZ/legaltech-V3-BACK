@@ -38,8 +38,8 @@ export class AuthService {
         uid: userRecord.uid,
         email: userRecord.email,
         fullName,
-        role: 'usuario',
-        createdAt: new Date(),
+        role: 'usuario',  // Asignamos un rol por defecto
+        createdAt: new Date().toISOString(),
       };
 
       // Guardar el usuario en Firestore
@@ -58,6 +58,7 @@ export class AuthService {
       throw new Error(`Error al crear el usuario: ${error.message}`);
     }
   }
+
 
   // Verificar el ID Token
   async verifyIdToken(idToken: string) {

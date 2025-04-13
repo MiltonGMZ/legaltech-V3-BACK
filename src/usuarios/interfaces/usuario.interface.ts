@@ -1,6 +1,6 @@
 export interface Usuario {
     uid: string;
-    nombre: string;
+    fullname: string;
     email: string;
     role: string;
     createdAt: Date;

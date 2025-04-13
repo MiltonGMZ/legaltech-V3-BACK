@@ -1,11 +1,11 @@
-import { Controller, Get, Post, Body, Param, Delete, Put } from '@nestjs/common';
+import { Controller, Get, Post, Param, Body, Put, Delete } from '@nestjs/common';
 import { UsuariosService } from './usuarios.service';
-import { ApiTags, ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
 import { CreateUsuarioDto } from './dtos/create-usuario.dto';
 import { UpdateUsuarioDto } from './dtos/update-usuario.dto';
+import { ApiTags, ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
 
 @ApiTags('Usuarios')
-@Controller('usuarios')
+@Controller('usuarios')  // Esta es la ruta base para todas las rutas de este controlador
 export class UsuariosController {
   constructor(private readonly usuariosService: UsuariosService) {}
 

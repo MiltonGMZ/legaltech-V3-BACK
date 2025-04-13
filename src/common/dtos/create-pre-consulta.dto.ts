@@ -23,7 +23,7 @@ export class CreatePreConsultaDto {
 
   @IsNotEmpty()
   @IsDateString()
-  fechaNacimiento: string;  // Aquí se espera que la fecha esté en formato ISO 8601
+  fechaNacimiento: string;  // Fecha en formato ISO 8601
 
   @IsNotEmpty()
   @IsString()
@@ -72,10 +72,6 @@ export class CreatePreConsultaDto {
   @IsNotEmpty()
   @IsBoolean()
   autorizaDatos: boolean;
-
-  @IsOptional()
-  @IsDateString()
-  fechaCreacion?: string;
 
   @IsOptional()
   @IsString()

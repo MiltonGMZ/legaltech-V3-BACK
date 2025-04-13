@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
-import { FirebaseService } from '../firebase/firebase.service';
-import { Firestore } from 'firebase-admin/firestore'; // Asegúrate de importar la instancia de Firestore de firebase-admin
-import { Timestamp } from 'firebase-admin/firestore'; // Para usar timestamps
+import { FirebaseService } from 'src/firebase/firebase.service';
+import { Firestore } from 'firebase-admin/firestore'; 
+import { Timestamp } from 'firebase-admin/firestore'; 
 import { CreatePreConsultaDto } from 'src/common/dtos/create-pre-consulta.dto';
 
 @Injectable()
@@ -9,22 +9,26 @@ export class ConsultasService {
   private firestore: Firestore;
 
   constructor(private readonly firebaseService: FirebaseService) {
-    
     this.firestore = firebaseService.getFirestore();
   }
 
   // Crear una nueva consulta
   async saveConsulta(createPreConsultaDto: CreatePreConsultaDto) {
     const consultasRef = this.firestore.collection('consultas');
+    
     const consultaDoc = {
       ...createPreConsultaDto,
+      fechaCreacion: Timestamp.now(),  // Usando Timestamp de Firebase
       estado: createPreConsultaDto.estado || 'pendiente',
       tipo: createPreConsultaDto.tipo || 'preconsulta',
-      fechaCreacion: new Date().toISOString(),
     };
 
-    const docRef = await consultasRef.add(consultaDoc);
-    return { id: docRef.id, message: 'Consulta creada correctamente' };
+    try {
+      const docRef = await consultasRef.add(consultaDoc);
+      return { id: docRef.id, message: 'Consulta creada correctamente' };
+    } catch (error) {
+      throw new Error(`Error al crear la consulta: ${error.message}`);
+    }
   }
 
   // Obtener todas las consultas
@@ -67,7 +71,6 @@ export class ConsultasService {
     const consultaRef = this.firestore.collection('consultas').doc(consultaId);
     await consultaRef.update({ estado: status });
     
-    // Si la consulta es aprobada, convertirla en un caso activo
     if (status === 'Aprobado') {
       await consultaRef.update({ tipo: 'caso', estado: 'activo', fechaActualizacion: Timestamp.now() });
     }

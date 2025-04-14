@@ -3,12 +3,11 @@ import * as admin from 'firebase-admin';
 import { FirebaseService } from 'src/firebase/firebase.service';
 import { RolesService } from 'src/roles/roles.service';
 
-
 @Injectable()
 export class AuthService {
   constructor(
     private readonly firebaseService: FirebaseService,
-    private readonly rolesService: RolesService
+    private readonly rolesService: RolesService,
   ) {
     if (!admin.apps.length) {
       admin.initializeApp({
@@ -22,7 +21,10 @@ export class AuthService {
   async register(email: string, password: string, fullName: string) {
     try {
       // Verificar si el email ya está registrado
-      const existingUser = await admin.auth().getUserByEmail(email).catch(() => null);
+      const existingUser = await admin
+        .auth()
+        .getUserByEmail(email)
+        .catch(() => null);
       if (existingUser) {
         throw new Error('El email ya está registrado');
       }
@@ -39,12 +41,15 @@ export class AuthService {
         uid: userRecord.uid,
         email: userRecord.email,
         fullName,
-        role: 'usuario',  // Asignamos un rol por defecto
+        role: 'usuario', // Asignamos un rol por defecto
         createdAt: new Date().toISOString(),
       };
 
       // Guardar el usuario en Firestore
-      const { docId } = await this.firebaseService.addDocument('users', userData);
+      const { docId } = await this.firebaseService.addDocument(
+        'users',
+        userData,
+      );
 
       // Crear un token personalizado para el usuario
       const idToken = await admin.auth().createCustomToken(userRecord.uid);
@@ -59,7 +64,6 @@ export class AuthService {
       throw new Error(`Error al crear el usuario: ${error.message}`);
     }
   }
-
 
   // Verificar el ID Token
   async verifyIdToken(idToken: string) {
@@ -86,7 +90,9 @@ export class AuthService {
       await admin.auth().generatePasswordResetLink(email);
       return { message: 'Enlace de recuperación de contraseña enviado' };
     } catch (error) {
-      throw new Error(`Error al generar el enlace de recuperación: ${error.message}`);
+      throw new Error(
+        `Error al generar el enlace de recuperación: ${error.message}`,
+      );
     }
   }
 
@@ -95,37 +101,60 @@ export class AuthService {
     try {
       const decodedToken = await this.verifyIdToken(idToken);
       const userRecord = await admin.auth().getUser(decodedToken.uid);
-      return userRecord;
+
+      // Obtener rol desde Firestore
+      const userDoc = await this.firebaseService.getDocuments('users', 'uid', decodedToken.uid);
+      if (userDoc.length === 0) {
+        throw new Error('No se encontró el usuario');
+      }
+
+      const userData = userDoc[0];
+      const role = userData.role;
+
+      if (!role) {
+        throw new Error('El usuario no tiene un rol asignado');
+      }
+
+      // Obtener permisos del rol usando RolesService
+      const permissions = await this.rolesService.getRolePermissions(role);
+
+      return {
+        uid: userRecord.uid,
+        email: userRecord.email,
+        fullName: userRecord.displayName,
+        role: role,
+        permissions: permissions, 
+      };
     } catch (error) {
       throw new Error(`Error al obtener la información del usuario: ${error.message}`);
     }
   }
 
-// Verificar permisos de un usuario
-async hasPermission(userId: string, requiredPermission: string): Promise<boolean> {
-  try {
-    const firestore = this.firebaseService.getFirestore();
-    const userDoc = await firestore.collection('users').doc(userId).get();
-    if (!userDoc.exists) {
-      throw new Error(`Usuario con id ${userId} no encontrado`);
+  // Verificar permisos de un usuario
+  async hasPermission(
+    userId: string,
+    requiredPermission: string,
+  ): Promise<boolean> {
+    try {
+      const firestore = this.firebaseService.getFirestore();
+      const userDoc = await firestore.collection('users').doc(userId).get();
+      if (!userDoc.exists) {
+        throw new Error(`Usuario con id ${userId} no encontrado`);
+      }
+
+      const userData = userDoc.data();
+      const role = userData?.role;
+
+      if (!role) {
+        throw new Error(`El usuario no tiene un rol asignado`);
+      }
+
+      // Obtener los permisos asociados al rol del usuario desde RolesService
+      const permissions = await this.rolesService.getRolePermissions(role);
+
+      return permissions.includes(requiredPermission);
+    } catch (error) {
+      throw new Error(`Error al verificar permisos: ${error.message}`);
     }
-
-    const userData = userDoc.data();
-    const role = userData?.role;
-
-    if (!role) {
-      throw new Error(`El usuario no tiene un rol asignado`);
-    }
-
-    // Obtener los permisos asociados al rol del usuario desde RolesService
-    const permissions = await this.rolesService.getRolePermissions(role);
-
-    return permissions.includes(requiredPermission);
-  } catch (error) {
-    throw new Error(`Error al verificar permisos: ${error.message}`);
   }
-}
-
-  
-  
 }

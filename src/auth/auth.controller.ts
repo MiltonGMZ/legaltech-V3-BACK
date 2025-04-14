@@ -47,23 +47,24 @@ export class AuthController {
     }
   }
 
-  // Ruta de inicio de sesión
   @Post('login')
-@ApiOperation({ summary: 'Iniciar sesión con token' })
-@ApiResponse({ status: 200, description: 'Inicio de sesión exitoso' })
-@ApiResponse({ status: 400, description: 'Error de autenticación' })
-async login(@Body('idToken') idToken: string) {
-  try {
-    const decodedToken = await this.authService.verifyIdToken(idToken);
-    return { message: 'Inicio de sesión exitoso', user: decodedToken };
-  } catch (error) {
-    throw new HttpException(
-      { message: error.message },
-      HttpStatus.BAD_REQUEST,
-    );
+  @ApiOperation({ summary: 'Iniciar sesión con token' })
+  @ApiResponse({ status: 200, description: 'Inicio de sesión exitoso' })
+  @ApiResponse({ status: 400, description: 'Error de autenticación' })
+  async login(@Body('idToken') idToken: string) {
+    try {
+      const userInfo = await this.authService.getUserInfo(idToken); 
+      return {
+        message: 'Inicio de sesión exitoso',
+        user: userInfo,  
+      };
+    } catch (error) {
+      throw new HttpException(
+        { message: error.message },
+        HttpStatus.BAD_REQUEST,
+      );
+    }
   }
-}
-
 
   // Ruta para obtener la información del usuario autenticado
   @Get('user-info')

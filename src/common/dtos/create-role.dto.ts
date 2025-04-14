@@ -1,11 +1,11 @@
 export class CreateRoleDto {
-  userId: string;
-  role: string;
+  id: string;
+  permisos: string;
 }
   
 export class UpdateRoleDto {
   role: string;
-}
+} 
 
  
   

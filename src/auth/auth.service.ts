@@ -93,69 +93,63 @@ export class AuthService {
     }
   }
 
-  // Obtener información del usuario autenticado
-async getUserInfo(idToken: string) {
-  try {
-    const decodedToken = await this.verifyIdToken(idToken);
-    const userRecord = await admin.auth().getUser(decodedToken.uid);
-
-    // Obtener rol desde Firestore
-    const userDoc = await this.firebaseService.getDocuments('users', 'uid', decodedToken.uid);
+  private async getUserData(uid: string) {
+    const userDoc = await this.firebaseService.getDocuments('users', 'uid', uid);
     if (userDoc.length === 0) {
-      throw new Error('No se encontró el usuario');
+      throw new Error('No se encontró el usuario en Firestore');
     }
-
-    const userData = userDoc[0];
-    const role = userData.role;
-
-    if (!role) {
-      throw new Error('El usuario no tiene un rol asignado');
-    }
-
-    // Obtener permisos del rol usando RolesService
-    const permissions = await this.rolesService.getRolePermissions(role);
-
-    if (!permissions || !Array.isArray(permissions)) {
-      throw new Error('Permisos no encontrados o inválidos');
-    }
-    return {
-      uid: userRecord.uid,
-      email: userRecord.email,
-      fullName: userRecord.displayName,
-      role: role,
-      permissions: permissions,  // Asegúrate de que los permisos están aquí
-    };
-  } catch (error) {
-    throw new Error(`Error al obtener la información del usuario: ${error.message}`);
+    return userDoc[0]; // Asumiendo que el documento existe
   }
-}
 
-
-  // Verificar permisos de un usuario
-  async hasPermission(
-    userId: string,
-    requiredPermission: string,
-  ): Promise<boolean> {
+ 
+  async getUserInfo(idToken: string) {
     try {
-      const firestore = this.firebaseService.getFirestore();
-      const userDoc = await firestore.collection('users').doc(userId).get();
-      if (!userDoc.exists) {
-        throw new Error(`Usuario con id ${userId} no encontrado`);
-      }
+      const decodedToken = await this.verifyIdToken(idToken);
+      const userRecord = await admin.auth().getUser(decodedToken.uid);
 
-      const userData = userDoc.data();
+      // Obtener usuario desde Firestore
+      const userData = await this.getUserData(decodedToken.uid);
       const role = userData?.role;
 
       if (!role) {
-        throw new Error(`El usuario no tiene un rol asignado`);
+        throw new Error('El usuario no tiene un rol asignado');
       }
 
-      // Obtener los permisos asociados al rol del usuario desde RolesService
+      // Obtener permisos asociados al rol
+      const permissions = await this.rolesService.getRolePermissions(role);
+      if (!permissions || !Array.isArray(permissions)) {
+        throw new Error('Permisos no encontrados o inválidos');
+      }
+      
+
+      return {
+        uid: userRecord.uid,
+        email: userRecord.email,
+        fullName: userRecord.displayName,
+        role: role,
+        permissions: permissions,  // Asegúrate de que los permisos están aquí
+      };
+    } catch (error) {
+      throw new Error(`Error al obtener la información del usuario: ${error.message}`);
+    }
+  }
+
+
+  async hasPermission(userId: string, requiredPermission: string): Promise<boolean> {
+    try {
+      const userData = await this.getUserData(userId); // Obtener los datos del usuario
+      const role = userData?.role;
+
+      if (!role) {
+        throw new Error('El usuario no tiene un rol asignado');
+      }
+
+      // Obtener permisos asociados al rol del usuario
       const permissions = await this.rolesService.getRolePermissions(role);
 
       return permissions.includes(requiredPermission);
     } catch (error) {
-      throw new Error(`Error al verificar permisos: ${error.message}`);
+      throw new Error(`Error al verificar permisos del usuario: ${error.message}`);
     }
   }
 }

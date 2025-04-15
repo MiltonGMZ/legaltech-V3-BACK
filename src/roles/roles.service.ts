@@ -23,8 +23,8 @@ export class RolesService {
         .get();
       
       return snapshot.docs.map((doc) => ({
-        id: doc.id,  // ID del documento
-        permisos: doc.data().permisos || []  // Permisos asociados al rol
+        id: doc.id,
+        permisos: doc.data().permisos || [] 
       }));
     } catch (error) {
       throw new Error(`Error al obtener roles: ${error.message}`);

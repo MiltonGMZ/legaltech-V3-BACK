@@ -46,10 +46,7 @@ export class AuthService {
       };
 
       // Guardar el usuario en Firestore
-      const { docId } = await this.firebaseService.addDocument(
-        'users',
-        userData,
-      );
+      const { docId } = await this.firebaseService.addDocument('users', userData);
 
       // Crear un token personalizado para el usuario
       const idToken = await admin.auth().createCustomToken(userRecord.uid);
@@ -97,38 +94,42 @@ export class AuthService {
   }
 
   // Obtener información del usuario autenticado
-  async getUserInfo(idToken: string) {
-    try {
-      const decodedToken = await this.verifyIdToken(idToken);
-      const userRecord = await admin.auth().getUser(decodedToken.uid);
+async getUserInfo(idToken: string) {
+  try {
+    const decodedToken = await this.verifyIdToken(idToken);
+    const userRecord = await admin.auth().getUser(decodedToken.uid);
 
-      // Obtener rol desde Firestore
-      const userDoc = await this.firebaseService.getDocuments('users', 'uid', decodedToken.uid);
-      if (userDoc.length === 0) {
-        throw new Error('No se encontró el usuario');
-      }
-
-      const userData = userDoc[0];
-      const role = userData.role;
-
-      if (!role) {
-        throw new Error('El usuario no tiene un rol asignado');
-      }
-
-      // Obtener permisos del rol usando RolesService
-      const permissions = await this.rolesService.getRolePermissions(role);
-
-      return {
-        uid: userRecord.uid,
-        email: userRecord.email,
-        fullName: userRecord.displayName,
-        role: role,
-        permissions: permissions, 
-      };
-    } catch (error) {
-      throw new Error(`Error al obtener la información del usuario: ${error.message}`);
+    // Obtener rol desde Firestore
+    const userDoc = await this.firebaseService.getDocuments('users', 'uid', decodedToken.uid);
+    if (userDoc.length === 0) {
+      throw new Error('No se encontró el usuario');
     }
+
+    const userData = userDoc[0];
+    const role = userData.role;
+
+    if (!role) {
+      throw new Error('El usuario no tiene un rol asignado');
+    }
+
+    // Obtener permisos del rol usando RolesService
+    const permissions = await this.rolesService.getRolePermissions(role);
+
+    if (!permissions || !Array.isArray(permissions)) {
+      throw new Error('Permisos no encontrados o inválidos');
+    }
+    return {
+      uid: userRecord.uid,
+      email: userRecord.email,
+      fullName: userRecord.displayName,
+      role: role,
+      permissions: permissions,  // Asegúrate de que los permisos están aquí
+    };
+  } catch (error) {
+    throw new Error(`Error al obtener la información del usuario: ${error.message}`);
   }
+}
+
 
   // Verificar permisos de un usuario
   async hasPermission(

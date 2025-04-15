@@ -18,49 +18,50 @@ export class AuthService {
   }
 
   // Registrar un nuevo usuario
-  async register(email: string, password: string, fullName: string) {
-    try {
-      // Verificar si el email ya está registrado
-      const existingUser = await admin
-        .auth()
-        .getUserByEmail(email)
-        .catch(() => null);
-      if (existingUser) {
-        throw new Error('El email ya está registrado');
-      }
-
-      // Crear el nuevo usuario en Firebase Auth
-      const userRecord = await admin.auth().createUser({
-        email,
-        password,
-        displayName: fullName,
-      });
-
-      // Crear el objeto de datos para Firestore
-      const userData = {
-        uid: userRecord.uid,
-        email: userRecord.email,
-        fullName,
-        role: 'usuario', // Asignamos un rol por defecto
-        createdAt: new Date().toISOString(),
-      };
-
-      // Guardar el usuario en Firestore
-      const { docId } = await this.firebaseService.addDocument('users', userData);
-
-      // Crear un token personalizado para el usuario
-      const idToken = await admin.auth().createCustomToken(userRecord.uid);
-
-      return {
-        message: 'Usuario creado con éxito',
-        userRecord,
-        idToken,
-        docId,
-      };
-    } catch (error) {
-      throw new Error(`Error al crear el usuario: ${error.message}`);
+async register(email: string, password: string, fullName: string, role: string = 'usuario') {
+  try {
+    // Verificar si el email ya está registrado
+    const existingUser = await admin
+      .auth()
+      .getUserByEmail(email)
+      .catch(() => null);
+    if (existingUser) {
+      throw new Error('El email ya está registrado');
     }
+
+    // Crear el nuevo usuario en Firebase Auth
+    const userRecord = await admin.auth().createUser({
+      email,
+      password,
+      displayName: fullName,
+    });
+
+    // Crear el objeto de datos para Firestore
+    const userData = {
+      uid: userRecord.uid,
+      email: userRecord.email,
+      fullName,
+      role: role, // Usamos el rol enviado desde el frontend o el valor por defecto
+      createdAt: new Date().toISOString(),
+    };
+
+    // Guardar el usuario en Firestore
+    const { docId } = await this.firebaseService.addDocument('users', userData);
+
+    // Crear un token personalizado para el usuario
+    const idToken = await admin.auth().createCustomToken(userRecord.uid);
+
+    return {
+      message: 'Usuario creado con éxito',
+      userRecord,
+      idToken,
+      docId,
+    };
+  } catch (error) {
+    throw new Error(`Error al crear el usuario: ${error.message}`);
   }
+}
+
 
   // Verificar el ID Token
   async verifyIdToken(idToken: string) {

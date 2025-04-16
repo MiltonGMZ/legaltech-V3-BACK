@@ -17,7 +17,6 @@ import { CreatePreConsultaDto } from 'src/common/dtos/create-pre-consulta.dto';
 export class ConsultasController {
   constructor(private readonly consultasService: ConsultasService) {}
 
-  // Ruta para crear una nueva consulta
   @Post()
   @ApiOperation({ summary: 'Crear una nueva preconsulta jurídica' })
   @ApiBody({ type: CreatePreConsultaDto })

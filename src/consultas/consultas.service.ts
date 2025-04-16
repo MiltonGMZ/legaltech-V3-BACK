@@ -18,7 +18,7 @@ export class ConsultasService {
     
     const consultaDoc = {
       ...createPreConsultaDto,
-      fechaCreacion: Timestamp.now(),  // Usando Timestamp de Firebase
+      fechaCreacion: Timestamp.now(),  
       estado: createPreConsultaDto.estado || 'pendiente',
       tipo: createPreConsultaDto.tipo || 'preconsulta',
     };

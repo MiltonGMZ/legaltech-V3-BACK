@@ -50,15 +50,24 @@ export class ConsultasService {
     return snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
   }
 
-  // Obtener casos activos de un usuario
-  async getActiveCases(uid: string) {
-    const consultasRef = this.firestore.collection('consultas');
-    const snapshot = await consultasRef
-      .where('userId', '==', uid)
-      .where('estado', '==', 'activo')
-      .get();
-    return snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-  }
+  // Obtener casos activos
+async getActiveCases(uid: string) {
+  const consultasRef = this.firestore.collection('consultas');
+  const snapshot = await consultasRef
+    .where('userId', '==', uid)  
+    .where('estado', '==', 'activo')
+    .get();
+
+  return snapshot.docs.map((doc) => {
+    const data = doc.data();
+    return {
+      id: doc.id,
+      fechaCreacion: data.fechaCreacion.toDate(),
+      ...data
+    };
+  });
+}
+
 
   // Obtener consulta por ID
   async getConsultaById(consultaId: string) {

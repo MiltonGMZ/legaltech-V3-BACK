@@ -47,4 +47,13 @@ export class UsuariosController {
   deleteUsuario(@Param('uid') uid: string) {
     return this.usuariosService.deleteUsuario(uid);
   }
+
+   // Endpoint para obtener abogados
+   @Get('abogados')
+   @ApiOperation({ summary: 'Obtener todos los abogados' })
+   @ApiResponse({ status: 200, description: 'Abogados obtenidos correctamente' })
+   @ApiResponse({ status: 404, description: 'No se encontraron abogados' })
+   async getAbogados() {
+     return this.usuariosService.getAbogados();
+   }
 }

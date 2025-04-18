@@ -51,6 +51,20 @@ export class UsuariosService {
     return { uid: updated.id, ...updated.data() };
   }
   
+  // Obtener abogados
+  async getAbogados() {
+    const snapshot = await this.firebaseService
+      .getFirestore()
+      .collection('users')
+      .where('role', '==', 'abogado') // Filtra los usuarios cuyo rol es 'abogado'
+      .get();
+
+    if (snapshot.empty) {
+      throw new NotFoundException('No se encontraron abogados');
+    }
+
+    return snapshot.docs.map((doc) => ({ uid: doc.id, ...doc.data() }));
+  }
 
   async deleteUsuario(uid: string) {
     await this.firebaseService.getFirestore().collection('users').doc(uid).delete();

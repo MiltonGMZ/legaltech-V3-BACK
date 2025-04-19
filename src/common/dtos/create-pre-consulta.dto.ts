@@ -79,9 +79,13 @@ export class CreatePreConsultaDto {
 
   @IsOptional()
   @IsString()
-  estado?: string;
+  estado?: 'pendiente' | 'aprobado' | 'rechazado' | 'activo' | 'resuelto' | 'cerrado';
 
   @IsNotEmpty()
   @IsString()
-  tipo: string;
+  tipo: 'preconsulta' | 'caso';
+
+  @IsOptional()
+  @IsString()
+  responsableCaso?: string;
 }

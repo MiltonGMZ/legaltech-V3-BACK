@@ -55,7 +55,7 @@ export class ConsultasController {
 
   @Patch(':id/estado')
   @ApiOperation({ summary: 'Actualizar el estado de una consulta' })
-  @ApiBody({ schema: { example: { status: 'Aprobado' } } })
+  @ApiBody({ schema: { example: { status: 'aprobado' } } })
   @ApiResponse({ status: 200, description: 'Estado actualizado correctamente' })
   async updateStatus(@Param('id') id: string, @Body('status') status: string) {
     try {

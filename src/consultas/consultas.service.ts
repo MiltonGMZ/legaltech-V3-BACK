@@ -138,37 +138,41 @@ export class ConsultasService {
 
   async assignCase(consultaId: string, userId: string) {
     if (!consultaId || !userId) {
-      throw new Error(
-        'El ID de la consulta y el ID del usuario son obligatorios',
-      );
+      throw new Error('El ID de la consulta y el ID del usuario son obligatorios');
     }
-
-    try {
-      const consultaRef = this.firebaseService
-        .getFirestore()
-        .collection('consultas')
-        .doc(consultaId);
-      const consultaSnapshot = await consultaRef.get();
-
-      if (!consultaSnapshot.exists) {
-        throw new Error(`No se encontró el caso con ID ${consultaId}`);
-      }
-
-      await consultaRef.update({
-        responsableCaso: userId,
-        estado: 'asignado',
-        fechaAsignacion: Timestamp.now(),
-      });
-
-      return {
-        status: 'success',
-        message: `El caso #${consultaId} ha sido asignado al abogado ${userId}`,
-      };
-    } catch (error) {
-      console.error('Error al asignar el caso:', error);
-      throw new Error(`Error al asignar el caso: ${error.message}`);
+  
+    const consultaRef = this.firestore.collection('consultas').doc(consultaId);
+    const consultaSnapshot = await consultaRef.get();
+  
+    if (!consultaSnapshot.exists) {
+      throw new Error(`No se encontró el caso con ID ${consultaId}`);
     }
+  
+    // Obtener los detalles del abogado para incluir el fullName
+    const userRef = this.firestore.collection('users').doc(userId);
+    const userSnapshot = await userRef.get();
+  
+    if (!userSnapshot.exists) {
+      throw new Error(`No se encontró el usuario con ID ${userId}`);
+    }
+  
+    const abogado = userSnapshot.data();
+  
+    // Actualiza el responsableCaso con el nombre del abogado
+    await consultaRef.update({
+      responsableCaso: abogado.fullName,  // Guardamos el nombre completo del abogado
+      estado: 'asignado',
+      fechaAsignacion: Timestamp.now(),
+    });
+  
+    return {
+      status: 'success',
+      message: `El caso #${consultaId} ha sido asignado al abogado ${abogado.fullName}`,
+    };
   }
+  
+  
+
 
   // Método para rechazar un caso
   async rejectCase(consultaId: string) {
@@ -187,4 +191,5 @@ export class ConsultasService {
 
     return { message: `El caso con ID ${consultaId} ha sido rechazado.` };
   }
+  
 }

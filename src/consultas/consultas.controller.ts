@@ -1,5 +1,5 @@
 import { Controller, Get, Post, Patch, Param, Body, HttpException, HttpStatus } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBody } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiBody, ApiParam } from '@nestjs/swagger';
 import { ConsultasService } from './consultas.service';
 import { CreatePreConsultaDto } from 'src/common/dtos/create-pre-consulta.dto';
 
@@ -91,5 +91,28 @@ export class ConsultasController {
         HttpStatus.NOT_FOUND,
       );
     }
+  }
+
+ 
+  @Patch(':id/estado')
+  @ApiOperation({ summary: 'Actualizar estado de un caso a aprobado' })
+  @ApiParam({ name: 'id', description: 'ID del caso a aprobar' })
+  @ApiResponse({ status: 200, description: 'Caso aprobado correctamente' })
+  @ApiResponse({ status: 400, description: 'Error al aprobar el caso' })
+  async approveCase(@Param('id') casoId: string, @Body() body: { status: string }) {
+    if (body.status !== 'aprobado') {
+      throw new Error('El estado debe ser "aprobado"');
+    }
+    return await this.consultasService.updateConsultaStatus(casoId, body.status);
+  }
+
+  // Endpoint para marcar un caso como notificado
+  @Patch(':id/notificado')
+  @ApiOperation({ summary: 'Marcar un caso como notificado' })
+  @ApiParam({ name: 'id', description: 'ID del caso a notificar' })
+  @ApiResponse({ status: 200, description: 'Caso notificado correctamente' })
+  @ApiResponse({ status: 400, description: 'Error al marcar el caso como notificado' })
+  async markAsNotified(@Param('id') casoId: string) {
+    return await this.consultasService.updateConsultaStatus(casoId, 'notificado');
   }
 }

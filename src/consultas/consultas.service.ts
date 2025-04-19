@@ -96,23 +96,44 @@ export class ConsultasService {
     return { id: consultaSnapshot.id, ...consultaSnapshot.data() };
   }
 
-  // Actualizar el estado de una consulta
   async updateConsultaStatus(consultaId: string, status: string) {
     const consultaRef = this.firestore.collection('consultas').doc(consultaId);
   
+    // Lista de estados permitidos
     const allowedStatuses = ['pendiente', 'aprobado', 'rechazado', 'activo', 'resuelto', 'cerrado'];
-    
+  
+    // Verificar que el estado es válido
     if (!allowedStatuses.includes(status)) {
       throw new Error('Estado no permitido');
     }
   
-    await consultaRef.update({
-      estado: status,
-      fechaActualizacion: Timestamp.now(), 
-    });
+    // Obtener el documento para verificar si existe
+    const consultaSnapshot = await consultaRef.get();
+    if (!consultaSnapshot.exists) {
+      throw new Error(`Consulta con ID ${consultaId} no encontrada`);
+    }
   
-    return { status: 'success', message: `El estado del caso #${consultaId} ha sido actualizado a ${status}.` };
+    // Si el estado es aprobado, también cambiamos el tipo a "caso"
+    if (status === 'aprobado') {
+      await consultaRef.update({
+        estado: status,
+        tipo: 'caso', // Convertir a un caso
+        fechaActualizacion: Timestamp.now(),
+      });
+    } else {
+      // Si no es aprobado, solo actualizamos el estado
+      await consultaRef.update({
+        estado: status,
+        fechaActualizacion: Timestamp.now(),
+      });
+    }
+  
+    return {
+      status: 'success',
+      message: `El estado del caso #${consultaId} ha sido actualizado a ${status}.`,
+    };
   }
+  
   
 
   async assignCase(consultaId: string, userId: string) {

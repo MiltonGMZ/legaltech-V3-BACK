@@ -3,7 +3,6 @@ import { FirebaseService } from '../firebase/firebase.service';
 import { CreateUsuarioDto } from './dtos/create-usuario.dto';
 import { UpdateUsuarioDto } from './dtos/update-usuario.dto';
 
-
 @Injectable()
 export class UsuariosService {
   constructor(private readonly firebaseService: FirebaseService) {}
@@ -17,15 +16,31 @@ export class UsuariosService {
   }
 
   async getUsuarioById(uid: string) {
-    const doc = await this.firebaseService.getFirestore().collection('users').doc(uid).get();
-    if (!doc.exists) throw new NotFoundException('Usuario no encontrado');
-    return { uid: doc.id, ...doc.data() };
+    // Filtramos los documentos en la colección 'users' donde el campo 'uid' coincida
+    const snapshot = await this.firebaseService.getFirestore()
+      .collection('users') // Seleccionamos la colección 'users'
+      .where('uid', '==', uid) // Filtramos por el campo 'uid' que contiene el identificador del usuario
+      .get();
+  
+    // Verificamos si la consulta devolvió algún documento
+    if (snapshot.empty) {
+      throw new NotFoundException(`Usuario con UID ${uid} no encontrado`);
+    }
+  
+    // Devolvemos el primer documento que coincida (aunque debería ser solo uno)
+    const user = snapshot.docs[0]; 
+    return { uid: user.id, ...user.data() }; // Devolvemos el UID del documento y los datos del usuario
   }
+  
+  
+  
+  
+  
 
   async createUsuario(data: CreateUsuarioDto) {
     const user = {
       ...data,
-      createdAt: new Date(),
+      createdAt: new Date(), 
     };
     const docRef = await this.firebaseService
       .getFirestore()
@@ -34,23 +49,47 @@ export class UsuariosService {
     return { uid: docRef.id, ...user };
   }
 
-  async updateUsuario(uid: string, data: UpdateUsuarioDto) {
-    const docRef = this.firebaseService.getFirestore().collection('users').doc(uid);
+  async updateUsuarios(uids: string[], data: { [x: string]: any; }) {
+    if (!data || Object.keys(data).length === 0) {
+      throw new Error('No se proporcionaron datos para actualizar.');
+    }
   
-    // Eliminar propiedades undefined
-    const cleanData = Object.entries(data).reduce((acc, [key, value]) => {
-      if (value !== undefined) {
-        acc[key] = value;
+    const batch = this.firebaseService.getFirestore().batch();
+  
+    // Transformar data para eliminar cualquier prototipo o clase
+    const plainData = Object.assign({}, data);
+  
+    // Verificar que los usuarios existan antes de intentar actualizar
+    for (const uid of uids) {
+      // Buscamos el documento donde el campo 'uid' coincida
+      const snapshot = await this.firebaseService.getFirestore()
+        .collection('users')
+        .where('uid', '==', uid)
+        .get();
+  
+      if (snapshot.empty) {
+        throw new NotFoundException(`Usuario con UID ${uid} no encontrado`);
       }
-      return acc;
-    }, {} as Record<string, any>);
   
-    // Aplicar update solo con los campos definidos
-    await docRef.update(cleanData);
-    const updated = await docRef.get();
-    return { uid: updated.id, ...updated.data() };
+      const docRef = snapshot.docs[0].ref; // Obtenemos la referencia al documento
+      batch.update(docRef, plainData); // Preparamos la actualización
+    }
+  
+    try {
+      await batch.commit();
+      return { message: 'Usuarios actualizados correctamente' };
+    } catch (error) {
+      throw new Error(`Error al actualizar los usuarios: ${error.message}`);
+    }
   }
   
+  
+
+  async deleteUsuario(uid: string) {
+    await this.firebaseService.getFirestore().collection('users').doc(uid).delete();
+    return { message: 'Usuario eliminado correctamente' };
+  }
+
   // Obtener abogados
   async getAbogados() {
     const snapshot = await this.firebaseService
@@ -64,10 +103,5 @@ export class UsuariosService {
     }
 
     return snapshot.docs.map((doc) => ({ uid: doc.id, ...doc.data() }));
-  }
-
-  async deleteUsuario(uid: string) {
-    await this.firebaseService.getFirestore().collection('users').doc(uid).delete();
-    return { message: 'Usuario eliminado correctamente' };
   }
 }

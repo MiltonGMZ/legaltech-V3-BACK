@@ -14,6 +14,12 @@ export class UpdateUsuarioDto {
   password?: string;
 
   @IsOptional()
-  @IsString()
-  role?: string;
+  @IsString({ each: true })
+  role?: string | { id: string };
+
+  @IsOptional()
+  uid?: string;
+
+  @IsOptional()
+  createdAt?: Date;
 }

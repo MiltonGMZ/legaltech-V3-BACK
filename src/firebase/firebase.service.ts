@@ -85,38 +85,36 @@ export class FirebaseService {
     }
   }
 
-  // Método para actualizar un documento
   async updateDocument(collectionName: string, docId: string, data: any) {
     if (!this.firestore) {
       throw new Error('Firestore no está inicializado');
     }
-
+  
     try {
+      // Limpiar datos para asegurarnos de que solo los valores válidos sean enviados
+      const cleanData = this.cleanData(data);
+  
       console.log(`Actualizando documento en la colección ${collectionName} con ID ${docId}`);
       const docRef = this.firestore.collection(collectionName).doc(docId);
-      await docRef.update(data);
+  
+      // Realizamos la actualización
+      await docRef.update(cleanData);
       console.log(`Documento ${docId} actualizado correctamente`);
     } catch (error) {
       console.error('Error al actualizar documento:', error);
       throw new Error('No se pudo actualizar el documento');
     }
   }
-
-  // Método para eliminar un documento
-  async deleteDocument(collectionName: string, docId: string) {
-    if (!this.firestore) {
-      throw new Error('Firestore no está inicializado');
+  
+  // Función para limpiar los datos y asegurarnos de que no haya valores no válidos
+  private cleanData(data: any): any {
+    const cleanData: any = {};
+    for (const [key, value] of Object.entries(data)) {
+      if (value !== undefined && value !== null) {
+        cleanData[key] = value;
+      }
     }
-
-    try {
-      console.log(`Eliminando documento en la colección ${collectionName} con ID ${docId}`);
-      const docRef = this.firestore.collection(collectionName).doc(docId);
-      await docRef.delete();
-      console.log(`Documento ${docId} eliminado correctamente`);
-    } catch (error) {
-      console.error('Error al eliminar documento:', error);
-      throw new Error('No se pudo eliminar el documento');
-    }
+    return cleanData;
   }
 
   // Subir archivo a Firebase Storage

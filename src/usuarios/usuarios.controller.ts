@@ -1,11 +1,11 @@
-import { Controller, Get, Post, Param, Body, Put, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Param, Body, Put, Delete, NotFoundException } from '@nestjs/common';
 import { UsuariosService } from './usuarios.service';
 import { CreateUsuarioDto } from './dtos/create-usuario.dto';
 import { UpdateUsuarioDto } from './dtos/update-usuario.dto';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
 
 @ApiTags('Usuarios')
-@Controller('usuarios')  // Esta es la ruta base para todas las rutas de este controlador
+@Controller('usuarios')
 export class UsuariosController {
   constructor(private readonly usuariosService: UsuariosService) {}
 
@@ -33,12 +33,12 @@ export class UsuariosController {
   }
 
   @Put(':uid')
-  @ApiOperation({ summary: 'Actualizar usuario existente' })
-  @ApiParam({ name: 'uid', description: 'UID del usuario a actualizar' })
-  @ApiResponse({ status: 200, description: 'Usuario actualizado exitosamente' })
-  updateUsuario(@Param('uid') uid: string, @Body() body: UpdateUsuarioDto) {
-    return this.usuariosService.updateUsuario(uid, body);
-  }
+@ApiOperation({ summary: 'Actualizar usuario existente' })
+@ApiParam({ name: 'uid', description: 'UID del usuario a actualizar' })
+@ApiResponse({ status: 200, description: 'Usuario actualizado exitosamente' })
+updateUsuario(@Param('uid') uid: string, @Body() body: UpdateUsuarioDto) {
+  return this.usuariosService.updateUsuarios([uid], body);
+}
 
   @Delete(':uid')
   @ApiOperation({ summary: 'Eliminar usuario' })
@@ -48,12 +48,16 @@ export class UsuariosController {
     return this.usuariosService.deleteUsuario(uid);
   }
 
-   // Endpoint para obtener abogados
-   @Get('abogados')
-   @ApiOperation({ summary: 'Obtener todos los abogados' })
-   @ApiResponse({ status: 200, description: 'Abogados obtenidos correctamente' })
-   @ApiResponse({ status: 404, description: 'No se encontraron abogados' })
-   async getAbogados() {
-     return this.usuariosService.getAbogados();
-   }
+  @Get('abogados')
+@ApiOperation({ summary: 'Obtener todos los abogados' })
+@ApiResponse({ status: 200, description: 'Abogados obtenidos correctamente' })
+@ApiResponse({ status: 404, description: 'No se encontraron abogados' })
+async getAbogados() {
+  try {
+    return await this.usuariosService.getAbogados();
+  } catch (error) {
+    throw new NotFoundException('No se encontraron abogados');
+  }
+}
+
 }

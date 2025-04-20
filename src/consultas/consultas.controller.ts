@@ -1,12 +1,28 @@
-import { Controller, Get, Post, Patch, Param, Body, HttpException, HttpStatus } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Patch,
+  Param,
+  Body,
+  HttpException,
+  HttpStatus,
+  UseInterceptors,
+  UploadedFile,
+} from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBody, ApiParam } from '@nestjs/swagger';
 import { ConsultasService } from './consultas.service';
 import { CreatePreConsultaDto } from 'src/common/dtos/create-pre-consulta.dto';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { FirebaseService } from 'src/firebase/firebase.service';
 
 @ApiTags('Consultas Jurídicas')
 @Controller('consultas')
 export class ConsultasController {
-  constructor(private readonly consultasService: ConsultasService) {}
+  constructor(
+    private readonly consultasService: ConsultasService,
+    private readonly firebaseService: FirebaseService
+  ) {}
 
   @Post()
   @ApiOperation({ summary: 'Crear una nueva preconsulta jurídica' })
@@ -77,7 +93,6 @@ export class ConsultasController {
     }
   }
 
-
   @Patch(':id/rechazar')
   @ApiOperation({ summary: 'Rechazar un caso' })
   @ApiResponse({ status: 200, description: 'Caso rechazado correctamente' })
@@ -93,8 +108,7 @@ export class ConsultasController {
     }
   }
 
- 
-  @Patch(':id/estado')
+  @Patch(':id/estado-aprobado')
   @ApiOperation({ summary: 'Actualizar estado de un caso a aprobado' })
   @ApiParam({ name: 'id', description: 'ID del caso a aprobar' })
   @ApiResponse({ status: 200, description: 'Caso aprobado correctamente' })
@@ -114,5 +128,19 @@ export class ConsultasController {
   @ApiResponse({ status: 400, description: 'Error al marcar el caso como notificado' })
   async markAsNotified(@Param('id') casoId: string) {
     return await this.consultasService.updateConsultaStatus(casoId, 'notificado');
+  }
+
+  @Post(':consultaId/upload')
+  @UseInterceptors(FileInterceptor('file'))
+  async uploadEvidence(
+    @Param('consultaId') consultaId: string,
+    @UploadedFile() file: Express.Multer.File
+  ) {
+    try {
+      const result = await this.firebaseService.uploadEvidence(file, consultaId);
+      return { message: result.message, fileUrl: result.fileUrl };
+    } catch (error) {
+      throw new Error('Error al subir la evidencia: ' + error.message);
+    }
   }
 }

@@ -191,5 +191,7 @@ export class ConsultasService {
 
     return { message: `El caso con ID ${consultaId} ha sido rechazado.` };
   }
+
+  
   
 }

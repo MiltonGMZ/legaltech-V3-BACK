@@ -3,17 +3,19 @@ import * as admin from 'firebase-admin';
 import * as path from 'path';
 import * as fs from 'fs';
 import * as dotenv from 'dotenv';
+import * as multer from 'multer';
 
 @Injectable()
 export class FirebaseService {
   private firestore: admin.firestore.Firestore;
+  private storage: admin.storage.Storage;
 
   constructor() {
-    dotenv.config(); // Cargar las variables de entorno desde un archivo .env
+    dotenv.config();
 
     const serviceAccountPath = process.env.FIREBASE_CONFIG_PATH
       ? path.resolve(process.env.FIREBASE_CONFIG_PATH)
-      : path.resolve(__dirname, '..', 'config', 'legaltechv2-firebase-adminsdk-fbsvc-053772f507.json'); // Cambia la ruta si es necesario
+      : path.resolve(__dirname, '..', 'config', 'legaltechv2-firebase-adminsdk-fbsvc-053772f507.json');
 
     // Comprobar si el archivo de configuración existe
     if (!fs.existsSync(serviceAccountPath)) {
@@ -26,11 +28,14 @@ export class FirebaseService {
         // Inicialización de Firebase Admin SDK
         admin.initializeApp({
           credential: admin.credential.cert(serviceAccountPath),
-          databaseURL: process.env.FIREBASE_DATABASE_URL || 'https://legaltechv2-default-rtdb.firebaseio.com', // URL de Firebase Realtime Database
+          databaseURL: process.env.FIREBASE_DATABASE_URL,
+          storageBucket: process.env.FIREBASE_STORAGE_BUCKET,
+        
         });
 
         // Obtener la referencia a Firestore
         this.firestore = admin.firestore();
+        this.storage = admin.storage();
         console.log('Firebase ha sido inicializado correctamente');
 
       } catch (error) {
@@ -40,6 +45,7 @@ export class FirebaseService {
     } else {
       console.log('Firebase ya estaba inicializado');
       this.firestore = admin.firestore();
+      this.storage = admin.storage();
     }
   }
 
@@ -111,6 +117,38 @@ export class FirebaseService {
       console.error('Error al eliminar documento:', error);
       throw new Error('No se pudo eliminar el documento');
     }
+  }
+
+  // Subir archivo a Firebase Storage
+  async uploadEvidence(file: Express.Multer.File, consultaId: string) {
+    const bucket = admin.storage().bucket(); // Usamos el bucket de Firebase Storage
+    const fileName = `evidencias/${consultaId}/${file.originalname}`;
+    
+    try {
+      // Subimos el archivo al bucket
+      const fileUpload = await bucket.upload(file.path, {
+        destination: fileName,
+        metadata: { contentType: file.mimetype },
+      });
+
+      // Guardamos la URL del archivo subido en Firestore
+      const fileUrl = `https://storage.googleapis.com/${bucket.name}/${fileName}`;
+      
+      // Actualizamos el documento con la URL de la evidencia
+      const consultaRef = this.firestore.collection('consultas').doc(consultaId);
+      await consultaRef.update({
+        evidencia: fileUrl,  // Guardamos la URL en la consulta
+      });
+
+      return { message: 'Evidencia subida con éxito', fileUrl };
+    } catch (error) {
+      throw new Error('Error al subir la evidencia: ' + error.message);
+    }
+  }
+  
+  // Retornar la referencia de Firebase Storage
+  getStorage(): admin.storage.Storage {
+    return this.storage;
   }
 
   // Retorna la instancia de Firestore

@@ -1,6 +1,10 @@
 import { IsNotEmpty, IsEmail, IsString, IsOptional, IsBoolean, IsDateString, IsEnum } from 'class-validator';
 
 export class CreatePreConsultaDto {
+  @IsOptional()
+  @IsString()
+  abogadoId: string;
+
   @IsNotEmpty()
   @IsString()
   tipoInvolucrado: string;

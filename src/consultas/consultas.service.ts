@@ -158,11 +158,12 @@ export class ConsultasService {
   
     const abogado = userSnapshot.data();
   
-    // Actualiza el responsableCaso con el nombre del abogado
+    // Actualiza el responsableCaso con el nombre del abogado y el abogadoId
     await consultaRef.update({
+      abogadoId: userId, // Guardamos el uid del abogado
       responsableCaso: abogado.fullName,  // Guardamos el nombre completo del abogado
-      estado: 'asignado',
-      fechaAsignacion: Timestamp.now(),
+      estado: 'asignado',  // Actualizamos el estado del caso
+      fechaAsignacion: Timestamp.now(),  
     });
   
     return {
@@ -170,6 +171,26 @@ export class ConsultasService {
       message: `El caso #${consultaId} ha sido asignado al abogado ${abogado.fullName}`,
     };
   }
+  
+  
+  
+  // ConsultasService (Backend)
+async getAssignedCases(abogadoId: string) {
+  const consultasRef = this.firestore.collection('consultas');
+  const snapshot = await consultasRef
+    .where('abogadoId', '==', abogadoId)  // Filtramos por el ID del abogado
+    .get();
+
+  return snapshot.docs.map((doc) => {
+    const data = doc.data();
+    return {
+      id: doc.id,
+      fechaCreacion: data.fechaCreacion.toDate(),
+      ...data,
+    };
+  });
+}
+
   
   
 

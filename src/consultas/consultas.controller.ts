@@ -143,4 +143,13 @@ export class ConsultasController {
       throw new Error('Error al subir la evidencia: ' + error.message);
     }
   }
+
+
+// ConsultasController (Backend)
+@Get('asignados/:abogadoId')
+@ApiOperation({ summary: 'Obtener los casos asignados a un abogado' })
+@ApiResponse({ status: 200, description: 'Casos asignados obtenidos correctamente' })
+async getAssignedCases(@Param('abogadoId') abogadoId: string) {
+  return this.consultasService.getAssignedCases(abogadoId);
+}
 }

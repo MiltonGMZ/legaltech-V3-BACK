@@ -3,8 +3,11 @@ import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 
+
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+
+  
 
   // Configuración de la validación global
   app.useGlobalPipes(
@@ -22,7 +25,7 @@ async function bootstrap() {
     allowedHeaders: 'Content-Type, Authorization',
   });
 
-  app.setGlobalPrefix('api'); // Prefijo para todas las rutas de la API
+  app.setGlobalPrefix('api');
 
   // Configuración de Swagger para documentación
   const config = new DocumentBuilder()

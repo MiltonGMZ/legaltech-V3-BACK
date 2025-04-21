@@ -2,8 +2,14 @@ import { WebSocketGateway, SubscribeMessage, MessageBody, ConnectedSocket, OnGat
 import { WebSocketService } from './web-socket.service';
 import { CreateWebSocketDto } from './dto/create-web-socket.dto';
 import { Socket } from 'socket.io';
+import { HttpException, HttpStatus } from '@nestjs/common';
 
-@WebSocketGateway()
+@WebSocketGateway({
+  cors: {
+    origin: 'http://localhost:4200', // Permitir solicitudes desde el frontend
+    methods: ['GET', 'POST'],
+  },
+})
 export class MensajesWebSocketGateway implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect {
   constructor(private readonly webSocketService: WebSocketService) {}
 
@@ -15,7 +21,7 @@ export class MensajesWebSocketGateway implements OnGatewayInit, OnGatewayConnect
   // Manejo de la conexión de un cliente
   handleConnection(client: Socket) {
     console.log(`Cliente conectado: ${client.id}`);
-    // Aquí puedes asociar el cliente con su userId o caseId
+    // Aquí puedes asociar el cliente con su userId o caseId si es necesario
   }
 
   // Manejo de la desconexión de un cliente
@@ -26,20 +32,28 @@ export class MensajesWebSocketGateway implements OnGatewayInit, OnGatewayConnect
 
   // Lógica para recibir y enviar un mensaje a un usuario específico
   @SubscribeMessage('sendMessage')
-  handleSendMessage(@MessageBody() createWebSocketDto: CreateWebSocketDto, @ConnectedSocket() client: Socket) {
+  async handleSendMessage(
+    @MessageBody() createWebSocketDto: CreateWebSocketDto, 
+    @ConnectedSocket() client: Socket
+  ) {
     const { caseId, senderId, message } = createWebSocketDto;
 
     // Validar que los datos del mensaje estén completos
     if (!caseId || !senderId || !message) {
-      throw new Error('Faltan datos en el mensaje');
+      throw new HttpException('Faltan datos en el mensaje', HttpStatus.BAD_REQUEST);
     }
 
-    // Enviar el mensaje al caso específico
-    this.webSocketService.sendMessageToCase( senderId, message);
+    try {
+      // Enviar el mensaje al caso específico
+      await this.webSocketService.sendMessageToCase(caseId, message);
 
-    // Emitir el mensaje a todos los usuarios conectados al caso (opcional)
-    this.webSocketService.sendMessageToUser(senderId, message); // Enviar al remitente
+      // Emitir el mensaje al remitente
+      await this.webSocketService.sendMessageToUser(senderId, message);
 
-    return { message: 'Mensaje enviado correctamente' };
+      return { message: 'Mensaje enviado correctamente' };
+    } catch (error) {
+      console.error('Error al enviar mensaje:', error);
+      throw new HttpException('Error al enviar el mensaje', HttpStatus.INTERNAL_SERVER_ERROR);
+    }
   }
 }

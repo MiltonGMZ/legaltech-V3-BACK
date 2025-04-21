@@ -1,24 +1,26 @@
-import { IsString, IsNotEmpty, IsOptional } from 'class-validator';
+import { IsString, IsNotEmpty, IsOptional, IsISO8601, Length } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class CreateMensajeDto {
   @ApiProperty()
   @IsString()
   @IsNotEmpty()
-  caseId: string;  // ID del caso al que pertenece el mensaje
+  caseId: string;  
 
   @ApiProperty()
   @IsString()
   @IsNotEmpty()
-  senderId: string;  // ID del remitente (abogado o usuario)
+  senderId: string; 
 
   @ApiProperty()
   @IsString()
   @IsNotEmpty()
-  message: string;  // Contenido del mensaje
+  @Length(1, 1000)  
+  message: string;  
 
   @ApiProperty({ required: false })
   @IsOptional()
   @IsString()
-  timestamp?: string;  // Timestamp en formato ISO 8601, opcional
+  @IsISO8601()  
+  timestamp?: string; 
 }

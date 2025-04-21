@@ -1,7 +1,6 @@
 import { Injectable } from '@nestjs/common';
-import { CreateWebSocketDto } from './dto/create-web-socket.dto';
-import { UpdateWebSocketDto } from './dto/update-web-socket.dto';
 import { Server, Socket } from 'socket.io';
+
 
 @Injectable()
 export class WebSocketService {
@@ -17,8 +16,16 @@ export class WebSocketService {
   // Enviar mensaje a un usuario específico
   sendMessageToUser(userId: string, message: string) {
     if (this.server) {
-      
       this.server.to(userId).emit('newMessage', message);
+    } else {
+      console.error('Server not initialized');
+    }
+  }
+
+  // Enviar mensaje a todos los usuarios conectados a un caso específico
+  sendMessageToCase(caseId: string, message: string) {
+    if (this.server) {
+      this.server.to(caseId).emit('newMessage', message);
     } else {
       console.error('Server not initialized');
     }
@@ -27,6 +34,7 @@ export class WebSocketService {
   // Conectar a un cliente WebSocket
   handleConnection(client: Socket) {
     console.log(`Client connected: ${client.id}`);
+    
   }
 
   // Desconectar cliente WebSocket
@@ -34,4 +42,15 @@ export class WebSocketService {
     console.log(`Client disconnected: ${client.id}`);
   }
 
+  // Unir un cliente a una sala (por ejemplo, un caso específico)
+  joinCase(client: Socket, caseId: string) {
+    client.join(caseId);
+    console.log(`Client ${client.id} joined case: ${caseId}`);
+  }
+
+
+  leaveCase(client: Socket, caseId: string) {
+    client.leave(caseId);
+    console.log(`Client ${client.id} left case: ${caseId}`);
+  }
 }

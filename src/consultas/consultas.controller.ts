@@ -152,4 +152,10 @@ export class ConsultasController {
 async getAssignedCases(@Param('abogadoId') abogadoId: string) {
   return this.consultasService.getAssignedCases(abogadoId);
 }
+
+
+@Patch(':consultaId/activar')
+async activateCase(@Param('consultaId') consultaId: string) {
+  return this.consultasService.activateCase(consultaId);
+}
 }

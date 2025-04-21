@@ -134,6 +134,33 @@ export class ConsultasService {
     };
   }
   
+
+  async activateCase(consultaId: string) {
+    const consultaRef = this.firestore.collection('consultas').doc(consultaId);
+    const consultaSnapshot = await consultaRef.get();
+  
+    if (!consultaSnapshot.exists) {
+      throw new NotFoundException(`Consulta con ID ${consultaId} no encontrada`);
+    }
+  
+    // Verificamos si el caso ya está asignado
+    const caseData = consultaSnapshot.data();
+    if (caseData.estado !== 'asignado') {
+      throw new HttpException('El caso debe estar asignado antes de activarse', HttpStatus.BAD_REQUEST);
+    }
+  
+    // Cambiar el estado a 'activo'
+    await consultaRef.update({
+      estado: 'activo',
+      fechaActualizacion: Timestamp.now(),
+    });
+  
+    return {
+      status: 'success',
+      message: `El caso #${consultaId} ha sido activado y está siendo trabajado.`,
+    };
+  }
+  
   
 
   async assignCase(consultaId: string, userId: string) {

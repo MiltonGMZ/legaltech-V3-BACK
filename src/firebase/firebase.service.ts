@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import * as admin from 'firebase-admin';
 import * as path from 'path';
 import * as fs from 'fs';
@@ -9,6 +9,7 @@ import * as multer from 'multer';
 export class FirebaseService {
   private firestore: admin.firestore.Firestore;
   private storage: admin.storage.Storage;
+  private readonly logger = new Logger(FirebaseService.name);
 
   constructor() {
     dotenv.config();
@@ -117,32 +118,40 @@ export class FirebaseService {
     return cleanData;
   }
 
-  // Subir archivo a Firebase Storage
-  async uploadEvidence(file: Express.Multer.File, consultaId: string) {
-    const bucket = admin.storage().bucket(); // Usamos el bucket de Firebase Storage
-    const fileName = `evidencias/${consultaId}/${file.originalname}`;
-    
-    try {
-      // Subimos el archivo al bucket
-      const fileUpload = await bucket.upload(file.path, {
-        destination: fileName,
-        metadata: { contentType: file.mimetype },
-      });
+ // Subir archivo a Firebase Storage con validación
+async uploadEvidence(file: Express.Multer.File, consultaId: string) {
+  const allowedTypes = ['image/jpeg', 'image/png', 'application/pdf'];
+  const maxSize = 5 * 1024 * 1024; // 5 MB
 
-      // Guardamos la URL del archivo subido en Firestore
-      const fileUrl = `https://storage.googleapis.com/${bucket.name}/${fileName}`;
-      
-      // Actualizamos el documento con la URL de la evidencia
-      const consultaRef = this.firestore.collection('consultas').doc(consultaId);
-      await consultaRef.update({
-        evidencia: fileUrl,  // Guardamos la URL en la consulta
-      });
-
-      return { message: 'Evidencia subida con éxito', fileUrl };
-    } catch (error) {
-      throw new Error('Error al subir la evidencia: ' + error.message);
-    }
+  if (!allowedTypes.includes(file.mimetype)) {
+    throw new Error('Tipo de archivo no permitido');
   }
+
+  if (file.size > maxSize) {
+    throw new Error('El archivo excede el tamaño máximo permitido (5 MB)');
+  }
+
+  const bucket = admin.storage().bucket();
+  const fileName = `evidencias/${consultaId}/${file.originalname}`;
+
+  try {
+    // Subir archivo
+    const fileUpload = await bucket.upload(file.path, {
+      destination: fileName,
+      metadata: { contentType: file.mimetype },
+    });
+
+    // Guardar URL en Firestore
+    const fileUrl = `https://storage.googleapis.com/${bucket.name}/${fileName}`;
+    const consultaRef = this.firestore.collection('consultas').doc(consultaId);
+    await consultaRef.update({ evidencia: fileUrl });
+
+    return { message: 'Evidencia subida con éxito', fileUrl };
+  } catch (error) {
+    this.handleError(error);
+  }
+}
+
   
   // Retornar la referencia de Firebase Storage
   getStorage(): admin.storage.Storage {
@@ -152,5 +161,11 @@ export class FirebaseService {
   // Retorna la instancia de Firestore
   getFirestore(): admin.firestore.Firestore {
     return this.firestore;
+  }
+
+  // Método para manejar errores
+  private handleError(error: any) {
+    this.logger.error(error.message || 'Error desconocido');
+    throw new Error(error.message || 'Error desconocido');
   }
 }

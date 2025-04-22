@@ -100,7 +100,7 @@ export class ConsultasService {
     const consultaRef = this.firestore.collection('consultas').doc(consultaId);
   
     // Lista de estados permitidos
-    const allowedStatuses = ['pendiente', 'aprobado', 'rechazado', 'activo', 'resuelto', 'cerrado'];
+    const allowedStatuses = ['pendiente', 'aprobado', 'rechazado', 'activo', 'resuelto', 'cerrado', 'asignado'];
   
     // Verificar que el estado es válido
     if (!allowedStatuses.includes(status)) {
@@ -160,9 +160,9 @@ export class ConsultasService {
   
     // Actualiza el responsableCaso con el nombre del abogado y el abogadoId
     await consultaRef.update({
-      abogadoId: userId, // Guardamos el uid del abogado
-      responsableCaso: abogado.fullName,  // Guardamos el nombre completo del abogado
-      estado: 'asignado',  // Actualizamos el estado del caso
+      abogadoId: userId, 
+      responsableCaso: abogado.fullName,  
+      estado: 'asignado',  
       fechaAsignacion: Timestamp.now(),  
     });
   
@@ -178,7 +178,7 @@ export class ConsultasService {
 async getAssignedCases(abogadoId: string) {
   const consultasRef = this.firestore.collection('consultas');
   const snapshot = await consultasRef
-    .where('abogadoId', '==', abogadoId)  // Filtramos por el ID del abogado
+    .where('abogadoId', '==', abogadoId)
     .get();
 
   return snapshot.docs.map((doc) => {
@@ -191,7 +191,32 @@ async getAssignedCases(abogadoId: string) {
   });
 }
 
-  
+async activateCase(consultaId: string) {
+  const consultaRef = this.firestore.collection('consultas').doc(consultaId);
+  const consultaSnapshot = await consultaRef.get();
+
+  if (!consultaSnapshot.exists) {
+    throw new NotFoundException(`Consulta con ID ${consultaId} no encontrada`);
+  }
+
+  // Verificamos si el caso ya está asignado
+  const caseData = consultaSnapshot.data();
+  if (caseData.estado !== 'asignado') {
+    throw new HttpException('El caso debe estar asignado antes de activarse', HttpStatus.BAD_REQUEST);
+  }
+
+  // Cambiar el estado a 'activo'
+  await consultaRef.update({
+    estado: 'activo',
+    fechaActualizacion: Timestamp.now(),
+  });
+
+  return {
+    status: 'success',
+    message: `El caso #${consultaId} ha sido activado y está siendo trabajado.`,
+  };
+}
+
   
 
 

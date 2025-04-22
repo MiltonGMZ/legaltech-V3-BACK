@@ -144,6 +144,13 @@ export class ConsultasController {
     }
   }
 
+  @ApiOperation({ summary: 'Activar los casos asignados' })
+@ApiResponse({ status: 200, description: 'Activar casos asignados obtenidos correctamente' })
+@Patch(':consultaId/activar')
+async activateCase(@Param('consultaId') consultaId: string) {
+  return this.consultasService.activateCase(consultaId);
+}
+
 
 // ConsultasController (Backend)
 @Get('asignados/:abogadoId')

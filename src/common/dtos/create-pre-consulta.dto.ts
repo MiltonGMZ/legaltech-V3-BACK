@@ -83,7 +83,7 @@ export class CreatePreConsultaDto {
 
   @IsOptional()
   @IsString()
-  estado?: 'pendiente' | 'aprobado' | 'rechazado' | 'activo' | 'resuelto' | 'cerrado';
+  estado?: 'pendiente' | 'aprobado' | 'rechazado' | 'activo' | 'resuelto' | 'cerrado' | 'asignado';
 
   @IsNotEmpty()
   @IsString()
@@ -92,4 +92,10 @@ export class CreatePreConsultaDto {
   @IsOptional()
   @IsString()
   responsableCaso?: string;
+
+  @IsOptional()
+  @IsString()
+  notificado?: boolean;
+
+  fechaCreacion: Date;
 }

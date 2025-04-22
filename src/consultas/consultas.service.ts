@@ -173,24 +173,22 @@ export class ConsultasService {
   }
   
   
+  async getAssignedCases(abogadoId: string) {
+    const consultasRef = this.firestore.collection('consultas');
+    const snapshot = await consultasRef
+      .where('abogadoId', '==', abogadoId)
+      .get();
   
-  // ConsultasService (Backend)
-async getAssignedCases(abogadoId: string) {
-  const consultasRef = this.firestore.collection('consultas');
-  const snapshot = await consultasRef
-    .where('abogadoId', '==', abogadoId)
-    .get();
-
-  return snapshot.docs.map((doc) => {
-    const data = doc.data();
-    return {
-      id: doc.id,
-      fechaCreacion: data.fechaCreacion.toDate(),
-      ...data,
-    };
-  });
-}
-
+    return snapshot.docs.map((doc) => {
+      const data = doc.data();
+      return {
+        id: doc.id,
+        fechaCreacion: data.fechaCreacion ? data.fechaCreacion.toDate() : null,
+        ...data,
+      };
+    });
+  }
+  
 async activateCase(consultaId: string) {
   const consultaRef = this.firestore.collection('consultas').doc(consultaId);
   const consultaSnapshot = await consultaRef.get();

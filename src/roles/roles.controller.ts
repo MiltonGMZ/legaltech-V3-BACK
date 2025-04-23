@@ -44,7 +44,6 @@ export class RolesController {
     }
   }
 
-  
   @Get(':role/permissions')
   @ApiOperation({ summary: 'Obtener permisos de un rol específico' })
   @ApiParam({ name: 'role', description: 'ID del rol para obtener los permisos' })
@@ -63,29 +62,46 @@ export class RolesController {
   }
 
   @Put(':role/permissions')
-  @ApiOperation({ summary: 'Actualizar permisos de un rol' })
-  @ApiParam({ name: 'role', description: 'Nombre del rol para actualizar permisos' })
-  @ApiResponse({ status: 200, description: 'Permisos actualizados correctamente' })
+@ApiOperation({ summary: 'Actualizar permisos de un rol' })
+@ApiParam({ name: 'role', description: 'Nombre del rol para actualizar permisos' })
+@ApiResponse({ status: 200, description: 'Permisos actualizados correctamente' })
+@ApiResponse({ status: 404, description: 'Rol no encontrado' })
+async updateRolePermissions(@Param('role') role: string, @Body() permissions: { permisos: string[] }) {
+  try {
+    await this.rolesService.updateRolePermissions(role, permissions.permisos);
+    return { role, updatedPermissions: permissions.permisos };
+  } catch (error) {
+    throw new HttpException('Error al actualizar permisos', HttpStatus.INTERNAL_SERVER_ERROR);
+  }
+}
+
+
+  @Put(':role/assign-permissions')
+  @ApiOperation({ summary: 'Asignar permisos a un rol' })
+  @ApiParam({ name: 'role', description: 'ID del rol al que se asignarán los permisos' })
+  @ApiResponse({ status: 200, description: 'Permisos asignados correctamente' })
   @ApiResponse({ status: 404, description: 'Rol no encontrado' })
-  async updateRolePermissions(@Param('role') role: string, @Body() permissions: { permisos: string[] }) {
+  async assignPermissionsToRole(
+    @Param('role') role: string,
+    @Body() permissions: { permisos: string[] }
+  ) {
     try {
-      await this.rolesService.updateRolePermissions(role, permissions.permisos);
-      return { role, updatedPermissions: permissions.permisos };
+      await this.rolesService.assignPermissionsToRole(role, permissions.permisos);
+      return { message: `Permisos asignados al rol ${role} correctamente`, permisos: permissions.permisos };
     } catch (error) {
-      throw new HttpException('Error al actualizar permisos', HttpStatus.INTERNAL_SERVER_ERROR);
+      throw new HttpException(`Error al asignar permisos al rol ${role}: ${error.message}`, HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 
-   
-   @Get('permissions')
-   @ApiOperation({ summary: 'Obtener todos los permisos disponibles' })
-   @ApiResponse({ status: 200, description: 'Permisos obtenidos correctamente' })
-   async getAllPermissions() {
-     try {
-       const permissions = await this.rolesService.getAllPermissions();
-       return { permissions };
-     } catch (error) {
-       throw new HttpException(error.message, HttpStatus.INTERNAL_SERVER_ERROR);
-     }
-   }
+  @Get('permissions')
+  @ApiOperation({ summary: 'Obtener todos los permisos disponibles' })
+  @ApiResponse({ status: 200, description: 'Permisos obtenidos correctamente' })
+  async getAllPermissions() {
+    try {
+      const permissions = await this.rolesService.getAllPermissions();
+      return { permissions };
+    } catch (error) {
+      throw new HttpException(error.message, HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+  }
 }

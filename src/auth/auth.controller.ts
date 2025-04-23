@@ -6,12 +6,14 @@ import {
   Headers,
   HttpException,
   HttpStatus,
+  BadRequestException,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import * as validator from 'class-validator';
 
 @Controller('auth')
-@ApiTags('auth') 
+@ApiTags('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
@@ -25,6 +27,16 @@ export class AuthController {
     @Body('password') password: string,
     @Body('fullName') fullName: string,
   ) {
+    // Validación básica de entrada
+    if (!email || !password || !fullName) {
+      throw new BadRequestException('Todos los campos son obligatorios');
+    }
+
+    // Validación del formato del correo electrónico
+    if (!validator.isEmail(email)) {
+      throw new BadRequestException('El correo electrónico no es válido');
+    }
+
     try {
       const userRecord = await this.authService.register(
         email,
@@ -47,16 +59,21 @@ export class AuthController {
     }
   }
 
+  // Ruta de login
   @Post('login')
   @ApiOperation({ summary: 'Iniciar sesión con token' })
   @ApiResponse({ status: 200, description: 'Inicio de sesión exitoso' })
   @ApiResponse({ status: 400, description: 'Error de autenticación' })
   async login(@Body('idToken') idToken: string) {
+    if (!idToken) {
+      throw new BadRequestException('El token de autenticación es requerido');
+    }
+
     try {
-      const userInfo = await this.authService.getUserInfo(idToken); 
+      const userInfo = await this.authService.getUserInfo(idToken);
       return {
         message: 'Inicio de sesión exitoso',
-        user: userInfo,  
+        user: userInfo,
       };
     } catch (error) {
       throw new HttpException(
@@ -72,9 +89,9 @@ export class AuthController {
   @ApiResponse({ status: 200, description: 'Información del usuario obtenida' })
   @ApiResponse({ status: 401, description: 'No autorizado' })
   async getUserInfo(@Headers('Authorization') authHeader: string) {
-    if (!authHeader) {
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
       throw new HttpException(
-        'No se ha proporcionado el token de autorización',
+        'No se ha proporcionado un token de autorización válido',
         HttpStatus.UNAUTHORIZED,
       );
     }
@@ -84,7 +101,7 @@ export class AuthController {
       return {
         statusCode: 200,
         message: 'Información del usuario obtenida con éxito',
-        user: userInfo, // Debe devolver solo los datos necesarios del usuario
+        user: userInfo, 
       };
     } catch (error) {
       throw new HttpException(
@@ -109,6 +126,11 @@ export class AuthController {
     description: 'Error al solicitar recuperación de contraseña',
   })
   async resetPassword(@Body('email') email: string) {
+    // Validación básica de entrada
+    if (!email) {
+      throw new BadRequestException('El correo electrónico es obligatorio');
+    }
+
     try {
       const response = await this.authService.resetPassword(email);
       return {

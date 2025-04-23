@@ -26,6 +26,35 @@ export class RolesService {
     }
   }
   
+   // Asignar permisos a un rol
+   async assignPermissionsToRole(roleId: string, permissions: string[]): Promise<void> {
+    const validPermissions = await this.getAllPermissions();
+
+    // Verificar que todos los permisos existen en la colección 'permissions'
+    const invalidPermissions = permissions.filter(permission => !validPermissions.includes(permission));
+    if (invalidPermissions.length > 0) {
+      throw new BadRequestException(`Los siguientes permisos no son válidos: ${invalidPermissions.join(', ')}`);
+    }
+
+    // Asignar los permisos al rol
+    try {
+      await this.firebaseService.getFirestore()
+        .collection('roles')
+        .doc(roleId)
+        .update({ permisos: permissions });
+    } catch (error) {
+      throw new Error(`Error al asignar permisos al rol ${roleId}: ${error.message}`);
+    }
+  }
+
+  async validatePermissionsExist(permissions: string[]): Promise<boolean> {
+    const snapshot = await this.firebaseService.getFirestore()
+      .collection('permissions')
+      .where('id', 'in', permissions)
+      .get();
+    
+    return snapshot.docs.length === permissions.length;
+  }
 
   // Obtener todos los roles desde Firestore
   async getAllRoles(): Promise<RoleData[]> {
@@ -36,7 +65,7 @@ export class RolesService {
         .get();
       
       if (snapshot.empty) {
-        throw new NotFoundException('No roles found');
+        throw new NotFoundException('No se encontraron roles');
       }
 
       return snapshot.docs.map((doc) => {
@@ -52,29 +81,33 @@ export class RolesService {
     }
   }
 
-  // Obtener un rol por su ID
-  async getRoleById(roleId: string): Promise<RoleData> {
-    try {
-      const doc = await this.firebaseService.getFirestore()
-        .collection('roles')
-        .doc(roleId)
-        .get();
+ 
 
-      if (!doc.exists) {
-        throw new NotFoundException(`Rol con ID ${roleId} no encontrado`);
-      }
+  // Obtener un rol por su ID// Obtener un rol por su ID
+async getRoleById(roleId: string): Promise<RoleData> {
+  try {
+    const doc = await this.firebaseService.getFirestore()
+      .collection('roles')
+      .doc(roleId)
+      .get();
 
-      const data = doc.data();
-      const permisos = this.parsePermissions(data?.permisos);
-      
-      return { id: doc.id, permisos };
-    } catch (error) {
-      throw new Error(`Error al obtener rol por ID: ${error.message}`);
+    if (!doc.exists) {
+      throw new NotFoundException(`Rol con ID ${roleId} no encontrado`);
     }
-  }
 
- // Obtener los permisos asociados a un rol
-async getRolePermissions(roleId: string): Promise<string[]> {
+    const data = doc.data();
+    const permisos = data?.permisos ? await this.getPermissionsDetails(data?.permisos) : [];
+    
+    return { id: doc.id, permisos };
+  } catch (error) {
+    throw new Error(`Error al obtener rol por ID: ${error.message}`);
+  }
+}
+
+
+// Obtener los permisos asociados a un rol
+// Obtener los permisos asociados a un rol
+async getRolePermissions(roleId: string): Promise<any[]> {
   try {
     const roleDoc = await this.firebaseService.getFirestore()
       .collection('roles')
@@ -85,11 +118,46 @@ async getRolePermissions(roleId: string): Promise<string[]> {
       throw new NotFoundException(`Rol con ID ${roleId} no encontrado`);
     }
 
-    return roleDoc.data()?.permisos || [];
+    const permisos = roleDoc.data()?.permisos || [];
+    if (permisos.length === 0) {
+      throw new NotFoundException(`No se encontraron permisos para el rol con ID ${roleId}`);
+    }
+
+    // Obtener los detalles de los permisos (nombre, descripción)
+    const permisosDetalles = await this.getPermissionsDetails(permisos);
+
+    return permisosDetalles; // Devolver permisos con detalles (nombre y descripción)
   } catch (error) {
     throw new Error(`Error al obtener permisos del rol ${roleId}: ${error.message}`);
   }
 }
+
+// Método para obtener los detalles de los permisos (nombre, descripción)
+async getPermissionsDetails(permissionIds: string[]): Promise<any[]> {
+  const permissions = [];
+  try {
+    for (const permissionId of permissionIds) {
+      const permissionDoc = await this.firebaseService.getFirestore()
+        .collection('permissions')
+        .doc(permissionId)
+        .get();
+
+      if (permissionDoc.exists) {
+        const permissionData = permissionDoc.data();
+        permissions.push({
+          id: permissionId,
+          nombre: permissionData?.nombre,       // Suponiendo que 'nombre' es un campo en la colección 'permissions'
+          descripcion: permissionData?.descripcion // Suponiendo que 'descripcion' es un campo en la colección 'permissions'
+        });
+      }
+    }
+    return permissions;
+  } catch (error) {
+    throw new Error(`Error al obtener detalles de los permisos: ${error.message}`);
+  }
+}
+
+
 
 
   // Crear un nuevo rol
@@ -132,36 +200,42 @@ async getRolePermissions(roleId: string): Promise<string[]> {
     }
   }
 
-  // Actualizar los permisos de un rol
-  async updateRolePermissions(roleId: string, permissions: string[]): Promise<{ message: string, permisos: string[] }> {
+  async updateRolePermissions(roleId: string, permissions: string[]): Promise<void> {
     try {
-      const roleDoc = await this.firebaseService.getFirestore()
-        .collection('roles')
-        .doc(roleId)
-        .get();
-
-      if (!roleDoc.exists) {
-        throw new NotFoundException(`Rol con ID ${roleId} no encontrado`);
-      }
-
-      // Verificamos y parseamos los permisos antes de actualizar
-      const parsedPermissions = this.parsePermissions(permissions);
+      // Actualizar permisos del rol en la colección de roles
       await this.firebaseService.getFirestore()
         .collection('roles')
         .doc(roleId)
-        .update({ permisos: parsedPermissions });
-
-      return { message: `Permisos del rol con ID ${roleId} actualizados correctamente`, permisos: parsedPermissions };
+        .update({ permisos: permissions });
+  
+      // Ahora, actualizamos los permisos de todos los usuarios que tienen este rol
+      const usersSnapshot = await this.firebaseService.getFirestore()
+        .collection('users')
+        .where('role', '==', roleId) // Filtrar usuarios con este rol
+        .get();
+  
+      usersSnapshot.forEach(async (userDoc) => {
+        const userId = userDoc.id;
+        const userData = userDoc.data();
+        
+        // Actualizar los permisos del usuario
+        await this.firebaseService.getFirestore()
+          .collection('users')
+          .doc(userId)
+          .update({ permissions: permissions });  // Actualiza los permisos para este usuario
+      });
+  
     } catch (error) {
-      throw new Error(`Error al actualizar permisos del rol con ID ${roleId}: ${error.message}`);
+      throw new Error(`Error al actualizar permisos del rol: ${error.message}`);
     }
   }
+  
 
   // Método privado para parsear permisos (si es necesario)
   private parsePermissions(permisos: string | string[]): string[] {
     if (typeof permisos === 'string') {
       try {
-        return JSON.parse(permisos);  // Si los permisos son una cadena JSON, parsearla
+        return JSON.parse(permisos); 
       } catch (error) {
         throw new BadRequestException('Formato de permisos inválido');
       }

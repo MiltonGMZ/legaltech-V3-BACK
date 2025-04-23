@@ -41,7 +41,8 @@ async register(email: string, password: string, fullName: string, role: string =
       uid: userRecord.uid,
       email: userRecord.email,
       fullName,
-      role: role, // Usamos el rol enviado desde el frontend o el valor por defecto
+      role: role,
+      permissions: Permissions,
       createdAt: new Date().toISOString(),
     };
 
@@ -128,11 +129,16 @@ async register(email: string, password: string, fullName: string, role: string =
         email: userRecord.email,
         fullName: userRecord.displayName,
         role: role,
-        permissions: permissions,  // Asegúrate de que los permisos están aquí
+        permissions: permissions, 
       };
     } catch (error) {
       throw new Error(`Error al obtener la información del usuario: ${error.message}`);
     }
+  }
+
+  getStoredPermissions(): string[] {
+    const permissions = localStorage.getItem('permissions');
+    return permissions ? JSON.parse(permissions) : [];
   }
 
 

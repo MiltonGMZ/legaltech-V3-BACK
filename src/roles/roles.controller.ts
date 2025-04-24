@@ -88,4 +88,21 @@ export class RolesController {
        throw new HttpException(error.message, HttpStatus.INTERNAL_SERVER_ERROR);
      }
    }
+
+   @Put(':role/assign-permissions')
+  @ApiOperation({ summary: 'Asignar permisos a un rol' })
+  @ApiParam({ name: 'role', description: 'ID del rol al que se asignarán los permisos' })
+  @ApiResponse({ status: 200, description: 'Permisos asignados correctamente' })
+  @ApiResponse({ status: 404, description: 'Rol no encontrado' })
+  async assignPermissionsToRole(
+    @Param('role') role: string,
+    @Body() permissions: { permisos: string[] }
+  ) {
+    try {
+      await this.rolesService.assignPermissionsToRole(role, permissions.permisos);
+      return { message: `Permisos asignados al rol ${role} correctamente`, permisos: permissions.permisos };
+    } catch (error) {
+      throw new HttpException(`Error al asignar permisos al rol ${role}: ${error.message}`, HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+  }
 }

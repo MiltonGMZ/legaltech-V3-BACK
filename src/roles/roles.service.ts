@@ -8,24 +8,30 @@ export interface RoleData {
 
 @Injectable()
 export class RolesService {
+  private readonly adminRoleId = 'administrador';
   constructor(
     private readonly firebaseService: FirebaseService,
   ) {}
 
 
-  // Obtener todos los permisos disponibles desde Firestore
+  // Obtener todos los permisos disponibles desde el rol de administrador
   async getAllPermissions(): Promise<string[]> {
     try {
       const snapshot = await this.firebaseService.getFirestore()
-        .collection('permissions')
+        .collection('roles')
+        .doc(this.adminRoleId)
         .get();
 
-      return snapshot.docs.map(doc => doc.id);
-    } catch (error) {
-      throw new Error(`Error al obtener permisos: ${error.message}`);
-    }
-  }
+        if (!snapshot.exists) {
+          throw new NotFoundException('Rol de administrador no encontrado');
+        }
   
+        const data = snapshot.data();
+        return data?.permisos || [];
+      } catch (error) {
+        throw new Error(`Error al obtener permisos: ${error.message}`);
+      }
+    }
 
   // Obtener todos los roles desde Firestore
   async getAllRoles(): Promise<RoleData[]> {
@@ -132,6 +138,34 @@ async getRolePermissions(roleId: string): Promise<string[]> {
     }
   }
 
+  
+// Asignar permisos a un rol
+async assignPermissionsToRole(roleId: string, permissions: string[]): Promise<void> {
+  
+  const validPermissions = await this.getAllPermissions();
+
+  // Verificar que todos los permisos existen en la colección de permisos
+  const invalidPermissions = permissions.filter(permission => !validPermissions.includes(permission));
+  if (invalidPermissions.length > 0) {
+    throw new BadRequestException(`Los siguientes permisos no son válidos: ${invalidPermissions.join(', ')}`);
+  }
+
+  // Prevenir que se quiten los permisos del administrador
+  if (roleId === this.adminRoleId) {
+    throw new BadRequestException('No se pueden modificar los permisos del administrador');
+  }
+
+  try {
+    await this.firebaseService.getFirestore()
+      .collection('roles')
+      .doc(roleId)
+      .update({ permisos: permissions });
+  } catch (error) {
+    throw new Error(`Error al asignar permisos al rol ${roleId}: ${error.message}`);
+  }
+}
+
+
   // Actualizar los permisos de un rol
   async updateRolePermissions(roleId: string, permissions: string[]): Promise<{ message: string, permisos: string[] }> {
     try {
@@ -157,7 +191,7 @@ async getRolePermissions(roleId: string): Promise<string[]> {
     }
   }
 
-  // Método privado para parsear permisos (si es necesario)
+  
   private parsePermissions(permisos: string | string[]): string[] {
     if (typeof permisos === 'string') {
       try {

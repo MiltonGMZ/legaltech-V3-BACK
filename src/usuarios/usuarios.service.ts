@@ -15,6 +15,8 @@ export class UsuariosService {
     return snapshot.docs.map((doc) => ({ uid: doc.id, ...doc.data() }));
   }
 
+  
+
   async getUsuarioById(uid: string) {
     // Filtramos los documentos en la colección 'users' donde el campo 'uid' coincida
     const snapshot = await this.firebaseService.getFirestore()
@@ -31,10 +33,7 @@ export class UsuariosService {
     const user = snapshot.docs[0]; 
     return { uid: user.id, ...user.data() }; // Devolvemos el UID del documento y los datos del usuario
   }
-  
-  
-  
-  
+   
   
 
   async createUsuario(data: CreateUsuarioDto) {

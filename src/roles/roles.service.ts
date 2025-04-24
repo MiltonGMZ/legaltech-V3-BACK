@@ -140,29 +140,47 @@ async getAvailablePermissions(roleId: string): Promise<string[]> {
 
 
 
-// Crear un nuevo rol
 async createRole(roleData: RoleData): Promise<{ message: string, id: string }> {
   try {
-    // Validar que el rol tiene un ID y al menos un permiso
-    if (!roleData.id || roleData.permisos.length === 0) {
-      throw new BadRequestException('El rol debe tener un ID y al menos un permiso');
+    if (!roleData.id) {
+      throw new BadRequestException('El rol debe tener un ID');
     }
 
-    // Utilizar el ID proporcionado para crear el documento en Firestore
-    const roleRef = this.firebaseService.getFirestore().collection('roles').doc(roleData.id);
+    
+    if (!roleData.permisos || roleData.permisos.length === 0) {
+      const defaultPermissions = await this.getDefaultPermissionsForRole('usuario'); 
+      roleData.permisos = defaultPermissions;
+    }
 
-    // Establecer los datos del documento en Firestore
-    await roleRef.set({
-      permisos: roleData.permisos,  // Asignar los permisos al rol
+    // Añadir el nuevo rol a la colección 'roles'
+    const newRole = await this.firebaseService.addDocument('roles', {
+      id: roleData.id,
+      permisos: roleData.permisos,
     });
 
-    // Retornar la respuesta con el mensaje y el ID del rol
-    return { message: 'Rol creado exitosamente', id: roleData.id };
+    return { message: 'Rol creado exitosamente', id: newRole.docId };
   } catch (error) {
     throw new Error(`Error al crear rol: ${error.message}`);
   }
 }
 
+// Método para obtener los permisos del rol 'usuario' como permisos por defecto
+async getDefaultPermissionsForRole(roleId: string): Promise<string[]> {
+  try {
+    const roleDoc = await this.firebaseService.getFirestore()
+      .collection('roles')
+      .doc(roleId)
+      .get();
+
+    if (!roleDoc.exists) {
+      throw new NotFoundException(`Rol con ID ${roleId} no encontrado`);
+    }
+
+    return roleDoc.data()?.permisos || [];
+  } catch (error) {
+    throw new Error(`Error al obtener permisos del rol ${roleId}: ${error.message}`);
+  }
+}
 
 
   async deleteRole(roleId: string): Promise<{ message: string }> {

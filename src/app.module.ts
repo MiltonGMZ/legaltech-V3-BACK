@@ -6,10 +6,12 @@ import { ConsultasModule } from './consultas/consultas.module';
 import { AuthModule } from './auth/auth.module';
 import { RolesModule } from './roles/roles.module';
 import { UsuariosModule } from './usuarios/usuarios.module';
+import { DashboardService } from './dashboard/dashboard.service';
+import { DashboardModule } from './dashboard/dashboard.module';
 
 @Module({
-  imports: [FirebaseModule, ConsultasModule, AuthModule, RolesModule, UsuariosModule],
+  imports: [FirebaseModule, ConsultasModule, AuthModule, RolesModule, UsuariosModule, DashboardModule],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [AppService, DashboardService],
 })
 export class AppModule {}

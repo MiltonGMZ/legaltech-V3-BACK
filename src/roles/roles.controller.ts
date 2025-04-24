@@ -62,6 +62,37 @@ export class RolesController {
     }
   }
 
+
+  // Endpoint para obtener los permisos asignados de un rol
+  @Get(':role/permissions/assigned')
+  @ApiOperation({ summary: 'Obtener los permisos asignados a un rol' })
+  @ApiParam({ name: 'role', description: 'ID del rol para obtener permisos asignados' })
+  @ApiResponse({ status: 200, description: 'Permisos asignados obtenidos correctamente' })
+  @ApiResponse({ status: 404, description: 'Rol no encontrado' })
+  async getAssignedPermissions(@Param('role') role: string) {
+    try {
+      const permissions = await this.rolesService.getAssignedPermissions(role);
+      return { id: role, permisos: permissions };
+    } catch (error) {
+      throw new NotFoundException(`Error al obtener permisos asignados para el rol ${role}: ${error.message}`);
+    }
+  }
+
+  // Endpoint para obtener los permisos disponibles de un rol
+  @Get(':role/permissions/available')
+  @ApiOperation({ summary: 'Obtener los permisos disponibles para un rol' })
+  @ApiParam({ name: 'role', description: 'ID del rol para obtener permisos disponibles' })
+  @ApiResponse({ status: 200, description: 'Permisos disponibles obtenidos correctamente' })
+  @ApiResponse({ status: 404, description: 'Rol no encontrado' })
+  async getAvailablePermissions(@Param('role') role: string) {
+    try {
+      const permissions = await this.rolesService.getAvailablePermissions(role);
+      return { id: role, permisosDisponibles: permissions };
+    } catch (error) {
+      throw new NotFoundException(`Error al obtener permisos disponibles para el rol ${role}: ${error.message}`);
+    }
+  }
+
   @Put(':role/permissions')
   @ApiOperation({ summary: 'Actualizar permisos de un rol' })
   @ApiParam({ name: 'role', description: 'Nombre del rol para actualizar permisos' })

@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import * as admin from 'firebase-admin';
 import { FirebaseService } from 'src/firebase/firebase.service';
 import { RolesService } from 'src/roles/roles.service';
@@ -63,7 +63,6 @@ async register(email: string, password: string, fullName: string, role: string =
 }
 
 
-  // Verificar el ID Token
   async verifyIdToken(idToken: string) {
     try {
       return await admin.auth().verifyIdToken(idToken);
@@ -82,17 +81,8 @@ async register(email: string, password: string, fullName: string, role: string =
     }
   }
 
-  // Restablecer la contraseña
-  async resetPassword(email: string) {
-    try {
-      await admin.auth().generatePasswordResetLink(email);
-      return { message: 'Enlace de recuperación de contraseña enviado' };
-    } catch (error) {
-      throw new Error(
-        `Error al generar el enlace de recuperación: ${error.message}`,
-      );
-    }
-  }
+  
+  
 
   private async getUserData(uid: string) {
     const userDoc = await this.firebaseService.getDocuments('users', 'uid', uid);
@@ -151,6 +141,18 @@ async register(email: string, password: string, fullName: string, role: string =
       return permissions.includes(requiredPermission);
     } catch (error) {
       throw new Error(`Error al verificar permisos del usuario: ${error.message}`);
+    }
+  }
+
+  // Método para enviar el correo de restablecimiento de contraseña
+  async resetPassword(email: string): Promise<{ message: string }> {
+    try {
+      // Usamos el método de Firebase Auth para enviar el enlace de restablecimiento
+      await admin.auth().generatePasswordResetLink(email);
+      return { message: 'Se ha enviado el enlace de restablecimiento de contraseña a tu correo.' };
+    } catch (error) {
+      // Si el correo no está registrado o hay algún otro problema
+      throw new BadRequestException('Error al enviar el enlace de restablecimiento de contraseña. Asegúrate de que el correo esté registrado.');
     }
   }
 }

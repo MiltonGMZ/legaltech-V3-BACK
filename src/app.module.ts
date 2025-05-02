@@ -8,10 +8,23 @@ import { RolesModule } from './roles/roles.module';
 import { UsuariosModule } from './usuarios/usuarios.module';
 import { DashboardService } from './dashboard/dashboard.service';
 import { DashboardModule } from './dashboard/dashboard.module';
+import { ChatModule } from './chat/chat.module';
 
 @Module({
-  imports: [FirebaseModule, ConsultasModule, AuthModule, RolesModule, UsuariosModule, DashboardModule],
-  controllers: [AppController],
-  providers: [AppService, DashboardService],
+  imports: [
+    FirebaseModule, 
+    ConsultasModule, 
+    AuthModule, 
+    RolesModule, 
+    UsuariosModule, 
+    DashboardModule, 
+    ChatModule
+  ],
+  controllers: [
+    AppController
+  ],
+  providers: [
+    AppService, 
+    DashboardService],
 })
 export class AppModule {}

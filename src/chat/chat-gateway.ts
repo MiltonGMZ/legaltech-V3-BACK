@@ -3,43 +3,46 @@ import { WebSocketGateway, WebSocketServer, SubscribeMessage, MessageBody, OnGat
 import { Server, Socket } from 'socket.io';
 import { ChatService } from './chat.service'; // Servicio para manejar la persistencia de los mensajes
 
-@WebSocketGateway(3002, { cors: { origin: '*' } })
+@WebSocketGateway(3002, { 
+  cors: { 
+    origin: '*' 
+  } 
+})
+
+
 @Injectable()
 export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer() server: Server;
 
-  constructor(private readonly chatService: ChatService) {}
-
-  // Guardar mensaje en la base de datos y emitir a los clientes conectados
-  @SubscribeMessage('newMessage')
- 
-
-  async handleNewMessage(@MessageBody() data: { consultaId: string, userId: string, abogadoId: string, message: string }) {
-    const { consultaId, userId, abogadoId, message } = data;
-
-    // Validar si el usuario tiene permisos para enviar el mensaje
-    const valid = await this.chatService.validateUserForMessage(consultaId, userId, abogadoId);
-    if (!valid) {
-      return this.server.emit('error', 'No tienes permiso para enviar un mensaje en este caso.');
-    }
-
-    // Crear objeto CreateMessageDto
-    const createMessageDto = { consultaId, userId, abogadoId, message };
-
-    // Guardar mensaje en la base de datos
-    await this.chatService.saveMessage(createMessageDto);
-
-    // Emitir el mensaje a los clientes conectados al caso
-    this.server.to(consultaId).emit('message', { userId, message });
+  afterInit(server: Server) {
+    console.log('Socket server iniciado🕯️');
   }
 
-  // Método cuando un cliente se conecta
-  handleConnection(client: Socket) {
-    console.log(`Cliente conectado: ${client.id}`);
+  handleConnection(client: any, ...args: any[]) {
+    console.log('Cliente conectado🧨');
   }
 
-  // Método cuando un cliente se desconecta
-  handleDisconnect(client: Socket) {
-    console.log(`Cliente desconectado: ${client.id}`);
+  handleDisconnect(client: any, ...args: any[]) {
+    console.log('Cliente desconectado💥');
+  }
+  @SubscribeMessage('event_join')
+  handleJoinRoom(client: Socket, room: string) {
+    client.join(`room_${room}`);
+  }
+
+  @SubscribeMessage('event_message') //TODO Backend
+  handleIncommingMessage(
+    client: Socket,
+    payload: { room: string; message: string },
+  ) {
+    const { room, message } = payload;
+    console.log(payload)
+    this.server.to(`room_${room}`).emit('new_message',message);
+  }
+
+  @SubscribeMessage('event_leave')
+  handleRoomLeave(client: Socket, room:string) {
+    console.log(`chao room_${room}`)
+    client.leave(`room_${room}`);
   }
 }

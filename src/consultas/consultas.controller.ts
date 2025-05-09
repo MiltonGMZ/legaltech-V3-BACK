@@ -115,7 +115,7 @@ export class ConsultasController {
   @ApiResponse({ status: 400, description: 'Error al aprobar el caso' })
   async approveCase(@Param('id') casoId: string, @Body() body: { status: string }) {
     if (body.status !== 'aprobado') {
-      throw new Error('El estado debe ser "aprobado"');
+      throw new HttpException('El estado debe ser "aprobado', HttpStatus.BAD_REQUEST);
     }
     return await this.consultasService.updateConsultaStatus(casoId, body.status);
   }
@@ -140,7 +140,7 @@ export class ConsultasController {
       const result = await this.firebaseService.uploadEvidence(file, consultaId);
       return { message: result.message, fileUrl: result.fileUrl };
     } catch (error) {
-      throw new Error('Error al subir la evidencia: ' + error.message);
+      throw new HttpException('Error al subir la evidencia: ' + error.message, HttpStatus.BAD_REQUEST);
     }
   }
 

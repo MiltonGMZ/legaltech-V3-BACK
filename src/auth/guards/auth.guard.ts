@@ -1,4 +1,4 @@
-import { Injectable, CanActivate, ExecutionContext } from '@nestjs/common';
+import { Injectable, CanActivate, ExecutionContext, HttpStatus, HttpException } from '@nestjs/common';
 import { AuthService } from '../auth.service';
 
 
@@ -11,14 +11,14 @@ export class AuthGuard implements CanActivate {
     const idToken = request.headers['authorization']?.split(' ')[1];  // Asumiendo que el token viene en el encabezado Authorization
 
     if (!idToken) {
-      throw new Error('Token no proporcionado');
+      throw new HttpException('Token no proporcionado', HttpStatus.UNAUTHORIZED);
     }
 
     try {
       const decodedToken = await this.authService.verifyIdToken(idToken);
       request.user = decodedToken; // Agrega la información del usuario al request
     } catch (error) {
-      throw new Error('Token inválido');
+      throw new HttpException('Token inválido', HttpStatus.UNAUTHORIZED);
     }
 
     return true;

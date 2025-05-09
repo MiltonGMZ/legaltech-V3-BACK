@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import * as admin from 'firebase-admin';
 import { FirebaseService } from 'src/firebase/firebase.service';
 import { RolesService } from 'src/roles/roles.service';
@@ -26,7 +26,7 @@ async register(email: string, password: string, fullName: string, role: string =
       .getUserByEmail(email)
       .catch(() => null);
     if (existingUser) {
-      throw new Error('El email ya está registrado');
+      throw new HttpException('El email ya está registrado', HttpStatus.BAD_REQUEST);
     }
 
     // Crear el nuevo usuario en Firebase Auth
@@ -58,7 +58,7 @@ async register(email: string, password: string, fullName: string, role: string =
       docId,
     };
   } catch (error) {
-    throw new Error(`Error al crear el usuario: ${error.message}`);
+    throw new HttpException(`Error al crear el usuario: ${error.message}`, HttpStatus.BAD_REQUEST);
   }
 }
 
@@ -67,7 +67,7 @@ async register(email: string, password: string, fullName: string, role: string =
     try {
       return await admin.auth().verifyIdToken(idToken);
     } catch (error) {
-      throw new Error(`Token inválido: ${error.message}`);
+      throw new HttpException(`Token inválido: ${error.message}`, HttpStatus.UNAUTHORIZED);
     }
   }
 
@@ -87,7 +87,7 @@ async register(email: string, password: string, fullName: string, role: string =
   private async getUserData(uid: string) {
     const userDoc = await this.firebaseService.getDocuments('users', 'uid', uid);
     if (userDoc.length === 0) {
-      throw new Error('No se encontró el usuario en Firestore');
+      throw new HttpException('No se encontró el usuario en Firestore', HttpStatus.NOT_FOUND);
     }
     return userDoc[0]; // Asumiendo que el documento existe
   }
@@ -103,13 +103,13 @@ async register(email: string, password: string, fullName: string, role: string =
       const role = userData?.role;
 
       if (!role) {
-        throw new Error('El usuario no tiene un rol asignado');
+        throw new HttpException('El usuario no tiene un rol asignado', HttpStatus.BAD_REQUEST);
       }
 
       // Obtener permisos asociados al rol
       const permissions = await this.rolesService.getRolePermissions(role);
       if (!permissions || !Array.isArray(permissions)) {
-        throw new Error('Permisos no encontrados o inválidos');
+        throw new HttpException('Permisos no encontrados o inválidos', HttpStatus.BAD_REQUEST);
       }
       
 
@@ -121,7 +121,7 @@ async register(email: string, password: string, fullName: string, role: string =
         permissions: permissions,  // Asegúrate de que los permisos están aquí
       };
     } catch (error) {
-      throw new Error(`Error al obtener la información del usuario: ${error.message}`);
+      throw new HttpException(`Error al obtener la información del usuario: ${error.message}`, HttpStatus.BAD_REQUEST);
     }
   }
 
@@ -132,7 +132,7 @@ async register(email: string, password: string, fullName: string, role: string =
       const role = userData?.role;
 
       if (!role) {
-        throw new Error('El usuario no tiene un rol asignado');
+        throw new HttpException('El usuario no tiene un rol asignado', HttpStatus.BAD_REQUEST);
       }
 
       // Obtener permisos asociados al rol del usuario
@@ -140,7 +140,7 @@ async register(email: string, password: string, fullName: string, role: string =
 
       return permissions.includes(requiredPermission);
     } catch (error) {
-      throw new Error(`Error al verificar permisos del usuario: ${error.message}`);
+      throw new HttpException(`Error al verificar permisos del usuario: ${error.message}`, HttpStatus.BAD_REQUEST);
     }
   }
 

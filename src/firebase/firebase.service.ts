@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import * as admin from 'firebase-admin';
 import * as path from 'path';
 import * as fs from 'fs';
@@ -19,7 +19,7 @@ export class FirebaseService {
 
     // Comprobar si el archivo de configuración existe
     if (!fs.existsSync(serviceAccountPath)) {
-      throw new Error(`El archivo de configuración de Firebase no se encuentra en la ruta: ${serviceAccountPath}`);
+      throw new HttpException(`El archivo de configuración de Firebase no se encuentra en la ruta: ${serviceAccountPath}`, HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
     if (!admin.apps.length) {
@@ -40,7 +40,7 @@ export class FirebaseService {
 
       } catch (error) {
         console.error('Error al inicializar Firebase:', error);
-        throw new Error('No se pudo inicializar Firebase');
+        throw new HttpException('No se pudo inicializar Firebase', HttpStatus.INTERNAL_SERVER_ERROR);
       }
     } else {
       console.log('Firebase ya estaba inicializado');
@@ -52,7 +52,7 @@ export class FirebaseService {
   // Método para agregar un documento
   async addDocument(collection: string, data: any): Promise<{ docId: string }> {
     if (!this.firestore) {
-      throw new Error('Firestore no está inicializado');
+      throw new HttpException('Firestore no está inicializado', HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
     try {
@@ -62,14 +62,14 @@ export class FirebaseService {
       return { docId: docRef.id };
     } catch (error) {
       console.error('Error al agregar el documento:', error);
-      throw new Error(`Error al agregar el documento: ${error.message}`);
+      throw new HttpException(`Error al agregar el documento: ${error.message}`, HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 
   // Método para obtener documentos
   async getDocuments(collectionName: string, field: string, value: string): Promise<any[]> {
     if (!this.firestore) {
-      throw new Error('Firestore no está inicializado');
+      throw new HttpException('Firestore no está inicializado', HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
     try {
@@ -81,13 +81,13 @@ export class FirebaseService {
       return documents;
     } catch (error) {
       console.error('Error al obtener documentos:', error);
-      throw new Error('No se pudieron obtener los documentos');
+      throw new HttpException('No se pudieron obtener los documentos', HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 
   async updateDocument(collectionName: string, docId: string, data: any) {
     if (!this.firestore) {
-      throw new Error('Firestore no está inicializado');
+      throw new HttpException('Firestore no está inicializado', HttpStatus.INTERNAL_SERVER_ERROR);
     }
   
     try {
@@ -102,7 +102,7 @@ export class FirebaseService {
       console.log(`Documento ${docId} actualizado correctamente`);
     } catch (error) {
       console.error('Error al actualizar documento:', error);
-      throw new Error('No se pudo actualizar el documento');
+      throw new HttpException('No se pudo actualizar el documento', HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
   
@@ -140,7 +140,7 @@ export class FirebaseService {
 
       return { message: 'Evidencia subida con éxito', fileUrl };
     } catch (error) {
-      throw new Error('Error al subir la evidencia: ' + error.message);
+      throw new HttpException('Error al subir la evidencia: ' + error.message, HttpStatus.BAD_REQUEST);
     }
   }
   

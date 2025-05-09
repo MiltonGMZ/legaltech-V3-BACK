@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Delete, Put, Body, Param, NotFoundException, HttpException, HttpStatus } from '@nestjs/common';
+import { Controller, Get, Post, Delete, Put, Body, Param, HttpException, HttpStatus } from '@nestjs/common';
 import { RolesService, RoleData } from './roles.service';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
 
@@ -40,7 +40,7 @@ export class RolesController {
       await this.rolesService.deleteRole(role);
       return { message: 'Rol eliminado correctamente' };
     } catch (error) {
-      throw new NotFoundException(error.message);
+      throw new HttpException(error.message, HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 
@@ -54,11 +54,11 @@ export class RolesController {
     try {
       const permissions = await this.rolesService.getRolePermissions(role);
       if (!permissions || permissions.length === 0) {
-        throw new NotFoundException(`No se encontraron permisos para el rol con ID ${role}`);
+        throw new HttpException(`No se encontraron permisos para el rol con ID ${role}`, HttpStatus.NOT_FOUND);
       }
       return { id: role, permisos: permissions };
     } catch (error) {
-      throw new NotFoundException(`Error al obtener permisos para el rol ${role}: ${error.message}`);
+      throw new HttpException(`Error al obtener permisos para el rol ${role}: ${error.message}`, HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 
@@ -74,7 +74,7 @@ export class RolesController {
       const permissions = await this.rolesService.getAssignedPermissions(role);
       return { id: role, permisos: permissions };
     } catch (error) {
-      throw new NotFoundException(`Error al obtener permisos asignados para el rol ${role}: ${error.message}`);
+      throw new HttpException(`Error al obtener permisos asignados para el rol ${role}: ${error.message}`, HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 
@@ -89,7 +89,7 @@ export class RolesController {
       const permissions = await this.rolesService.getAvailablePermissions(role);
       return { id: role, permisosDisponibles: permissions };
     } catch (error) {
-      throw new NotFoundException(`Error al obtener permisos disponibles para el rol ${role}: ${error.message}`);
+      throw new HttpException(`Error al obtener permisos disponibles para el rol ${role}: ${error.message}`, HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 

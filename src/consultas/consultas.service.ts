@@ -1,8 +1,7 @@
 import {
-  HttpException,
   HttpStatus,
   Injectable,
-  NotFoundException,
+  HttpException,
 } from '@nestjs/common';
 import { FirebaseService } from 'src/firebase/firebase.service';
 import { Firestore } from 'firebase-admin/firestore';
@@ -14,7 +13,6 @@ const currentTimestamp = Timestamp.now();
 @Injectable()
 export class ConsultasService {
   private firestore: Firestore;
-  
 
   constructor(private readonly firebaseService: FirebaseService) {
     this.firestore = firebaseService.getFirestore();
@@ -38,7 +36,7 @@ export class ConsultasService {
     } catch (error) {
       // Manejo de errores con más información
       throw new HttpException(
-        `Error al crear la consulta: ${error.message}`,
+        `Error al crear la consulta: ${error.message}. Verifique los datos enviados.`,
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
@@ -54,12 +52,14 @@ export class ConsultasService {
   async markCaseAsResolved(consultaId: string) {
     const consultaRef = this.firestore.collection('consultas').doc(consultaId);
     await consultaRef.update({
-      estado: 'resuelto', 
+      estado: 'resuelto',
       fechaResolucion: currentTimestamp,
     });
-    return { status: 'success', message: `El caso #${consultaId} ha sido marcado como resuelto.` };
+    return {
+      status: 'success',
+      message: `El caso #${consultaId} ha sido marcado como resuelto.`,
+    };
   }
-  
 
   // Obtener consultas pendientes
   async getPendingConsultations() {
@@ -74,7 +74,6 @@ export class ConsultasService {
   async getActiveCases(uid: string) {
     const consultasRef = this.firestore.collection('consultas');
     const snapshot = await consultasRef
-      .where('userId', '==', uid)
       .where('estado', '==', 'activo')
       .get();
 
@@ -101,21 +100,35 @@ export class ConsultasService {
 
   async updateConsultaStatus(consultaId: string, status: string) {
     const consultaRef = this.firestore.collection('consultas').doc(consultaId);
-  
+
     // Lista de estados permitidos
-    const allowedStatuses = ['pendiente', 'aprobado', 'rechazado', 'activo', 'resuelto', 'cerrado', 'asignado'];
-  
+    const allowedStatuses = [
+      'pendiente',
+      'aprobado',
+      'rechazado',
+      'activo',
+      'resuelto',
+      'cerrado',
+      'asignado',
+    ];
+
     // Verificar que el estado es válido
     if (!allowedStatuses.includes(status)) {
-      throw new HttpException('Estado no permitido', HttpStatus.BAD_REQUEST);
+      throw new HttpException(
+        `El estado "${status}" no es válido. Los estados permitidos son: ${allowedStatuses.join(', ')}`,
+        HttpStatus.BAD_REQUEST,
+      );
     }
-  
+
     // Obtener el documento para verificar si existe
     const consultaSnapshot = await consultaRef.get();
     if (!consultaSnapshot.exists) {
-      throw new HttpException(`Consulta con ID ${consultaId} no encontrada`, HttpStatus.NOT_FOUND);
+      throw new HttpException(
+        `Consulta con ID ${consultaId} no encontrada`,
+        HttpStatus.NOT_FOUND,
+      );
     }
-  
+
     // Si el estado es aprobado, también cambiamos el tipo a "caso"
     if (status === 'aprobado') {
       await consultaRef.update({
@@ -130,43 +143,32 @@ export class ConsultasService {
         fechaActualizacion: currentTimestamp,
       });
     }
-  
+
     return {
       status: 'success',
       message: `El estado del caso #${consultaId} ha sido actualizado a ${status}.`,
     };
   }
-  
-  
 
   async assignCase(consultaId: string, userId: string) {
-    if (!consultaId || !userId) {
-      throw new HttpException('El ID de la consulta y el ID del usuario son obligatorios', HttpStatus.BAD_REQUEST);
-    }
+    this.validateInput(consultaId, userId);
   
     const consultaRef = this.firestore.collection('consultas').doc(consultaId);
-    const consultaSnapshot = await consultaRef.get();
+    const consultaSnapshot = await this.getDocument(consultaRef, 'consulta', consultaId);
   
-    if (!consultaSnapshot.exists) {
-      throw new HttpException(`No se encontró el caso con ID ${consultaId}`, HttpStatus.NOT_FOUND);
+    // Verificar si el caso ya está asignado
+    if (consultaSnapshot.data()?.abogadoId) {
+      throw new HttpException('Este caso ya tiene un abogado asignado', HttpStatus.CONFLICT);
     }
   
-    // Obtener los detalles del abogado para incluir el fullName
-    const userRef = this.firestore.collection('users').doc(userId);
-    const userSnapshot = await userRef.get();
-  
-    if (!userSnapshot.exists) {
-      throw new HttpException(`No se encontró el usuario con ID ${userId}`, HttpStatus.NOT_FOUND);
-    }
-  
-    const abogado = userSnapshot.data();
+    const abogado = await this.getUser(userId);
   
     // Actualiza el responsableCaso con el nombre del abogado y el abogadoId
     await consultaRef.update({
-      abogadoId: userId, 
-      responsableCaso: abogado.fullName,  
-      estado: 'asignado',  
-      fechaAsignacion: currentTimestamp,  
+      abogadoId: userId,
+      responsableCaso: abogado.fullName,
+      estado: 'asignado',
+      fechaAsignacion: currentTimestamp,
     });
   
     return {
@@ -175,13 +177,39 @@ export class ConsultasService {
     };
   }
   
+  private validateInput(consultaId: string, userId: string) {
+    if (!consultaId || !userId) {
+      throw new HttpException('El ID de la consulta y el ID del usuario son obligatorios', HttpStatus.BAD_REQUEST);
+    }
+  }
   
+  private async getDocument(ref: FirebaseFirestore.DocumentReference, entity: string, id: string) {
+    const snapshot = await ref.get();
+    if (!snapshot.exists) {
+      throw new HttpException(`${entity.charAt(0).toUpperCase() + entity.slice(1)} con ID ${id} no encontrada`, HttpStatus.NOT_FOUND);
+    }
+    return snapshot;
+  }
+  
+  private async getUser(userId: string) {
+    const userRef = this.firestore.collection('users').doc(userId);
+    const userSnapshot = await this.getDocument(userRef, 'usuario', userId);
+    const abogado = userSnapshot.data();
+    
+    if (!abogado?.fullName) {
+      throw new HttpException('El abogado no tiene un nombre completo registrado', HttpStatus.NOT_FOUND);
+    }
+  
+    return abogado;
+  }
+  
+
   async getAssignedCases(abogadoId: string) {
     const consultasRef = this.firestore.collection('consultas');
     const snapshot = await consultasRef
       .where('abogadoId', '==', abogadoId)
       .get();
-  
+
     return snapshot.docs.map((doc) => {
       const data = doc.data();
       return {
@@ -191,35 +219,38 @@ export class ConsultasService {
       };
     });
   }
-  
-async activateCase(consultaId: string) {
-  const consultaRef = this.firestore.collection('consultas').doc(consultaId);
-  const consultaSnapshot = await consultaRef.get();
 
-  if (!consultaSnapshot.exists) {
-    throw new NotFoundException(`Consulta con ID ${consultaId} no encontrada`);
+  async activateCase(consultaId: string) {
+    const consultaRef = this.firestore.collection('consultas').doc(consultaId);
+    const consultaSnapshot = await consultaRef.get();
+
+    if (!consultaSnapshot.exists) {
+      throw new HttpException(
+        `Consulta con ID ${consultaId} no encontrada`,
+        HttpStatus.NOT_FOUND,
+      );
+    }
+
+    // Verificamos si el caso ya está asignado
+    const caseData = consultaSnapshot.data();
+    if (caseData.estado !== 'asignado') {
+      throw new HttpException(
+        'El caso debe estar asignado antes de activarse',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    // Cambiar el estado a 'activo'
+    await consultaRef.update({
+      estado: 'activo',
+      fechaActualizacion: currentTimestamp,
+    });
+
+    return {
+      status: 'success',
+      message: `El caso #${consultaId} ha sido activado y está siendo trabajado.`,
+    };
   }
-
-  // Verificamos si el caso ya está asignado
-  const caseData = consultaSnapshot.data();
-  if (caseData.estado !== 'asignado') {
-    throw new HttpException('El caso debe estar asignado antes de activarse', HttpStatus.BAD_REQUEST);
-  }
-
-  // Cambiar el estado a 'activo'
-  await consultaRef.update({
-    estado: 'activo',
-    fechaActualizacion: currentTimestamp,
-  });
-
-  return {
-    status: 'success',
-    message: `El caso #${consultaId} ha sido activado y está siendo trabajado.`,
-  };
-}
-
-  
-
 
   // Método para rechazar un caso
   async rejectCase(consultaId: string) {
@@ -227,7 +258,7 @@ async activateCase(consultaId: string) {
 
     const consultaSnapshot = await consultaRef.get();
     if (!consultaSnapshot.exists) {
-      throw new NotFoundException('Consulta no encontrada');
+      throw new HttpException('Consulta no encontrada', HttpStatus.NOT_FOUND);
     }
 
     // Actualizar el estado del caso a "rechazado"
@@ -238,7 +269,4 @@ async activateCase(consultaId: string) {
 
     return { message: `El caso con ID ${consultaId} ha sido rechazado.` };
   }
-
-  
-  
 }

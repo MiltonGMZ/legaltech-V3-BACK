@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { FirebaseService } from '../firebase/firebase.service';
 import { CreateUsuarioDto } from './dtos/create-usuario.dto';
 import { UpdateUsuarioDto } from './dtos/update-usuario.dto';
@@ -26,7 +26,7 @@ export class UsuariosService {
   
     // Verificamos si la consulta devolvió algún documento
     if (snapshot.empty) {
-      throw new NotFoundException(`Usuario con UID ${uid} no encontrado`);
+      throw new HttpException(`Usuario con UID ${uid} no encontrado`, HttpStatus.NOT_FOUND);
     }
   
     // Devolvemos el primer documento que coincida (aunque debería ser solo uno)
@@ -50,7 +50,7 @@ export class UsuariosService {
 
   async updateUsuarios(uids: string[], data: { [x: string]: any; }) {
     if (!data || Object.keys(data).length === 0) {
-      throw new Error('No se proporcionaron datos para actualizar.');
+      throw new HttpException('No se proporcionaron datos para actualizar.', HttpStatus.BAD_REQUEST);
     }
   
     const batch = this.firebaseService.getFirestore().batch();
@@ -67,7 +67,7 @@ export class UsuariosService {
         .get();
   
       if (snapshot.empty) {
-        throw new NotFoundException(`Usuario con UID ${uid} no encontrado`);
+        throw new HttpException(`Usuario con UID ${uid} no encontrado`, HttpStatus.NOT_FOUND);
       }
   
       const docRef = snapshot.docs[0].ref; // Obtenemos la referencia al documento
@@ -78,7 +78,7 @@ export class UsuariosService {
       await batch.commit();
       return { message: 'Usuarios actualizados correctamente' };
     } catch (error) {
-      throw new Error(`Error al actualizar los usuarios: ${error.message}`);
+      throw new HttpException(`Error al actualizar los usuarios: ${error.message}`, HttpStatus.BAD_REQUEST);
     }
   }
   
@@ -98,7 +98,7 @@ export class UsuariosService {
       .get();
 
     if (snapshot.empty) {
-      throw new NotFoundException('No se encontraron abogados');
+      throw new HttpException('No se encontraron abogados', HttpStatus.NOT_FOUND);
     }
 
     return snapshot.docs.map((doc) => ({ uid: doc.id, ...doc.data() }));

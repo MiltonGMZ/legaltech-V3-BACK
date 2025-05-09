@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Param, Body, Put, Delete, NotFoundException } from '@nestjs/common';
+import { Controller, Get, Post, Param, Body, Put, Delete, HttpException, HttpStatus } from '@nestjs/common';
 import { UsuariosService } from './usuarios.service';
 import { CreateUsuarioDto } from './dtos/create-usuario.dto';
 import { UpdateUsuarioDto } from './dtos/update-usuario.dto';
@@ -56,7 +56,7 @@ async getAbogados() {
   try {
     return await this.usuariosService.getAbogados();
   } catch (error) {
-    throw new NotFoundException('No se encontraron abogados');
+    throw new HttpException('No se encontraron abogados', HttpStatus.NOT_FOUND);
   }
 }
 

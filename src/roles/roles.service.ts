@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, HttpException, BadRequestException, HttpStatus } from '@nestjs/common';
 import { FirebaseService } from '../firebase/firebase.service';
 
 export interface RoleData {
@@ -23,13 +23,13 @@ export class RolesService {
         .get();
 
         if (!snapshot.exists) {
-          throw new NotFoundException('Rol de administrador no encontrado');
+          throw new HttpException('Rol de administrador no encontrado', HttpStatus.NOT_FOUND);
         }
   
         const data = snapshot.data();
         return data?.permisos || [];
       } catch (error) {
-        throw new Error(`Error al obtener permisos: ${error.message}`);
+        throw new HttpException(`Error al obtener permisos: ${error.message}`, HttpStatus.INTERNAL_SERVER_ERROR);
       }
     }
 
@@ -42,7 +42,7 @@ export class RolesService {
         .get();
       
       if (snapshot.empty) {
-        throw new NotFoundException('No roles found');
+        throw new HttpException('No se encontraron roles', HttpStatus.NOT_FOUND);
       }
 
       return snapshot.docs.map((doc) => {
@@ -54,7 +54,7 @@ export class RolesService {
         };
       });
     } catch (error) {
-      throw new Error(`Error al obtener roles: ${error.message}`);
+      throw new HttpException(`Error al obtener roles: ${error.message}`, HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 
@@ -67,7 +67,7 @@ export class RolesService {
         .get();
 
       if (!doc.exists) {
-        throw new NotFoundException(`Rol con ID ${roleId} no encontrado`);
+        throw new HttpException(`Rol con ID ${roleId} no encontrado`, HttpStatus.NOT_FOUND);
       }
 
       const data = doc.data();
@@ -75,7 +75,7 @@ export class RolesService {
       
       return { id: doc.id, permisos };
     } catch (error) {
-      throw new Error(`Error al obtener rol por ID: ${error.message}`);
+      throw new HttpException(`Error al obtener rol por ID: ${error.message}`, HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 
@@ -88,12 +88,12 @@ async getRolePermissions(roleId: string): Promise<string[]> {
       .get();
 
     if (!roleDoc.exists) {
-      throw new NotFoundException(`Rol con ID ${roleId} no encontrado`);
+      throw new HttpException(`Rol con ID ${roleId} no encontrado`, HttpStatus.NOT_FOUND);
     }
 
     return roleDoc.data()?.permisos || [];
   } catch (error) {
-    throw new Error(`Error al obtener permisos del rol ${roleId}: ${error.message}`);
+    throw new HttpException(`Error al obtener permisos del rol ${roleId}: ${error.message}`, HttpStatus.INTERNAL_SERVER_ERROR);
   }
 }
 
@@ -106,13 +106,13 @@ async getAssignedPermissions(roleId: string): Promise<string[]> {
       .get();
 
     if (!roleDoc.exists) {
-      throw new NotFoundException(`Rol con ID ${roleId} no encontrado`);
+      throw new HttpException(`Rol con ID ${roleId} no encontrado`, HttpStatus.NOT_FOUND);
     }
 
     // Retorna solo los permisos ya asignados
     return roleDoc.data()?.permisos || [];
   } catch (error) {
-    throw new Error(`Error al obtener permisos asignados del rol ${roleId}: ${error.message}`);
+    throw new HttpException(`Error al obtener permisos asignados del rol ${roleId}: ${error.message}`, HttpStatus.INTERNAL_SERVER_ERROR);
   }
 }
 
@@ -125,7 +125,7 @@ async getAvailablePermissions(roleId: string): Promise<string[]> {
       .get();
 
     if (!roleDoc.exists) {
-      throw new NotFoundException(`Rol con ID ${roleId} no encontrado`);
+      throw new HttpException(`Rol con ID ${roleId} no encontrado`, HttpStatus.NOT_FOUND);
     }
 
     const assignedPermissions = roleDoc.data()?.permisos || [];
@@ -134,7 +134,7 @@ async getAvailablePermissions(roleId: string): Promise<string[]> {
 
     return availablePermissions;
   } catch (error) {
-    throw new Error(`Error al obtener permisos disponibles para el rol ${roleId}: ${error.message}`);
+    throw new HttpException(`Error al obtener permisos disponibles para el rol ${roleId}: ${error.message}`, HttpStatus.INTERNAL_SERVER_ERROR);
   }
 }
 
@@ -160,7 +160,7 @@ async createRole(roleData: RoleData): Promise<{ message: string, id: string }> {
 
     return { message: 'Rol creado exitosamente', id: newRole.docId };
   } catch (error) {
-    throw new Error(`Error al crear rol: ${error.message}`);
+    throw new HttpException(`Error al crear rol: ${error.message}`, HttpStatus.INTERNAL_SERVER_ERROR);
   }
 }
 
@@ -173,12 +173,12 @@ async getDefaultPermissionsForRole(roleId: string): Promise<string[]> {
       .get();
 
     if (!roleDoc.exists) {
-      throw new NotFoundException(`Rol con ID ${roleId} no encontrado`);
+      throw new HttpException(`Rol con ID ${roleId} no encontrado`, HttpStatus.NOT_FOUND);
     }
 
     return roleDoc.data()?.permisos || [];
   } catch (error) {
-    throw new Error(`Error al obtener permisos del rol ${roleId}: ${error.message}`);
+    throw new HttpException(`Error al obtener permisos del rol ${roleId}: ${error.message}`, HttpStatus.INTERNAL_SERVER_ERROR);
   }
 }
 
@@ -191,7 +191,7 @@ async getDefaultPermissionsForRole(roleId: string): Promise<string[]> {
         .get();
         
       if (!roleDoc.exists) {
-        throw new NotFoundException(`Rol con ID ${roleId} no encontrado`);
+        throw new HttpException(`Rol con ID ${roleId} no encontrado`, HttpStatus.NOT_FOUND);
       }
   
       await this.firebaseService.getFirestore()
@@ -201,7 +201,7 @@ async getDefaultPermissionsForRole(roleId: string): Promise<string[]> {
   
       return { message: 'Rol eliminado correctamente' }; 
     } catch (error) {
-      throw new Error(`Error al eliminar rol: ${error.message}`);
+      throw new HttpException(`Error al eliminar rol: ${error.message}`, HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 
@@ -228,7 +228,7 @@ async assignPermissionsToRole(roleId: string, permissions: string[]): Promise<vo
       .doc(roleId)
       .update({ permisos: permissions });
   } catch (error) {
-    throw new Error(`Error al asignar permisos al rol ${roleId}: ${error.message}`);
+    throw new HttpException(`Error al asignar permisos al rol ${roleId}: ${error.message}`, HttpStatus.BAD_REQUEST);
   }
 }
 
@@ -242,7 +242,7 @@ async assignPermissionsToRole(roleId: string, permissions: string[]): Promise<vo
         .get();
 
       if (!roleDoc.exists) {
-        throw new NotFoundException(`Rol con ID ${roleId} no encontrado`);
+        throw new HttpException(`Rol con ID ${roleId} no encontrado`, HttpStatus.NOT_FOUND);
       }
 
       // Verificamos y parseamos los permisos antes de actualizar
@@ -254,7 +254,7 @@ async assignPermissionsToRole(roleId: string, permissions: string[]): Promise<vo
 
       return { message: `Permisos del rol con ID ${roleId} actualizados correctamente`, permisos: parsedPermissions };
     } catch (error) {
-      throw new Error(`Error al actualizar permisos del rol con ID ${roleId}: ${error.message}`);
+      throw new HttpException(`Error al actualizar permisos del rol con ID ${roleId}: ${error.message}`, HttpStatus.BAD_REQUEST);
     }
   }
 

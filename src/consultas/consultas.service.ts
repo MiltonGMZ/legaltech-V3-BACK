@@ -9,9 +9,12 @@ import { Firestore } from 'firebase-admin/firestore';
 import { Timestamp } from 'firebase-admin/firestore';
 import { CreatePreConsultaDto } from 'src/common/dtos/create-pre-consulta.dto';
 
+const currentTimestamp = Timestamp.now();
+
 @Injectable()
 export class ConsultasService {
   private firestore: Firestore;
+  
 
   constructor(private readonly firebaseService: FirebaseService) {
     this.firestore = firebaseService.getFirestore();
@@ -24,7 +27,7 @@ export class ConsultasService {
     // Asegúrate de que la consulta tenga el estado y tipo correctos
     const consultaDoc = {
       ...createPreConsultaDto,
-      fechaCreacion: Timestamp.now(),
+      fechaCreacion: currentTimestamp,
       estado: createPreConsultaDto.estado || 'pendiente',
       tipo: createPreConsultaDto.tipo || 'preconsulta',
     };
@@ -52,7 +55,7 @@ export class ConsultasService {
     const consultaRef = this.firestore.collection('consultas').doc(consultaId);
     await consultaRef.update({
       estado: 'resuelto', 
-      fechaResolucion: Timestamp.now() 
+      fechaResolucion: currentTimestamp,
     });
     return { status: 'success', message: `El caso #${consultaId} ha sido marcado como resuelto.` };
   }
@@ -91,7 +94,7 @@ export class ConsultasService {
     const consultaSnapshot = await consultaRef.get();
 
     if (!consultaSnapshot.exists) {
-      throw new Error('Consulta no encontrada');
+      throw new HttpException('Consulta no encontrada', HttpStatus.NOT_FOUND);
     }
     return { id: consultaSnapshot.id, ...consultaSnapshot.data() };
   }
@@ -104,13 +107,13 @@ export class ConsultasService {
   
     // Verificar que el estado es válido
     if (!allowedStatuses.includes(status)) {
-      throw new Error('Estado no permitido');
+      throw new HttpException('Estado no permitido', HttpStatus.BAD_REQUEST);
     }
   
     // Obtener el documento para verificar si existe
     const consultaSnapshot = await consultaRef.get();
     if (!consultaSnapshot.exists) {
-      throw new Error(`Consulta con ID ${consultaId} no encontrada`);
+      throw new HttpException(`Consulta con ID ${consultaId} no encontrada`, HttpStatus.NOT_FOUND);
     }
   
     // Si el estado es aprobado, también cambiamos el tipo a "caso"
@@ -118,13 +121,13 @@ export class ConsultasService {
       await consultaRef.update({
         estado: status,
         tipo: 'caso', // Convertir a un caso
-        fechaActualizacion: Timestamp.now(),
+        fechaActualizacion: currentTimestamp,
       });
     } else {
       // Si no es aprobado, solo actualizamos el estado
       await consultaRef.update({
         estado: status,
-        fechaActualizacion: Timestamp.now(),
+        fechaActualizacion: currentTimestamp,
       });
     }
   
@@ -138,14 +141,14 @@ export class ConsultasService {
 
   async assignCase(consultaId: string, userId: string) {
     if (!consultaId || !userId) {
-      throw new Error('El ID de la consulta y el ID del usuario son obligatorios');
+      throw new HttpException('El ID de la consulta y el ID del usuario son obligatorios', HttpStatus.BAD_REQUEST);
     }
   
     const consultaRef = this.firestore.collection('consultas').doc(consultaId);
     const consultaSnapshot = await consultaRef.get();
   
     if (!consultaSnapshot.exists) {
-      throw new Error(`No se encontró el caso con ID ${consultaId}`);
+      throw new HttpException(`No se encontró el caso con ID ${consultaId}`, HttpStatus.NOT_FOUND);
     }
   
     // Obtener los detalles del abogado para incluir el fullName
@@ -153,7 +156,7 @@ export class ConsultasService {
     const userSnapshot = await userRef.get();
   
     if (!userSnapshot.exists) {
-      throw new Error(`No se encontró el usuario con ID ${userId}`);
+      throw new HttpException(`No se encontró el usuario con ID ${userId}`, HttpStatus.NOT_FOUND);
     }
   
     const abogado = userSnapshot.data();
@@ -163,7 +166,7 @@ export class ConsultasService {
       abogadoId: userId, 
       responsableCaso: abogado.fullName,  
       estado: 'asignado',  
-      fechaAsignacion: Timestamp.now(),  
+      fechaAsignacion: currentTimestamp,  
     });
   
     return {
@@ -206,7 +209,7 @@ async activateCase(consultaId: string) {
   // Cambiar el estado a 'activo'
   await consultaRef.update({
     estado: 'activo',
-    fechaActualizacion: Timestamp.now(),
+    fechaActualizacion: currentTimestamp,
   });
 
   return {
@@ -230,7 +233,7 @@ async activateCase(consultaId: string) {
     // Actualizar el estado del caso a "rechazado"
     await consultaRef.update({
       estado: 'rechazado',
-      fechaActualizacion: Timestamp.now(),
+      fechaActualizacion: currentTimestamp,
     });
 
     return { message: `El caso con ID ${consultaId} ha sido rechazado.` };

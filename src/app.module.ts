@@ -9,6 +9,9 @@ import { UsuariosModule } from './usuarios/usuarios.module';
 import { DashboardService } from './dashboard/dashboard.service';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { ChatModule } from './chat/chat.module';
+import { MulterModule } from '@nestjs/platform-express';
+import { memoryStorage } from 'multer';
+import { FileUploadModule } from './file-upload/file-upload.module';
 
 @Module({
   imports: [
@@ -17,8 +20,12 @@ import { ChatModule } from './chat/chat.module';
     AuthModule, 
     RolesModule, 
     UsuariosModule, 
-    DashboardModule, 
-    ChatModule
+    DashboardModule,
+    FileUploadModule,
+    ChatModule,
+     MulterModule.register({
+      storage: memoryStorage(),
+    }),
   ],
   controllers: [
     AppController

@@ -12,7 +12,7 @@ import {
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBody, ApiParam } from '@nestjs/swagger';
 import { ConsultasService } from './consultas.service';
-import { CreatePreConsultaDto } from 'src/common/dtos/create-pre-consulta.dto';
+import { CreatePreConsultaDto, EstadoConsulta } from 'src/common/dtos/create-pre-consulta.dto';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { FirebaseService } from 'src/firebase/firebase.service';
 
@@ -73,7 +73,7 @@ export class ConsultasController {
   @ApiOperation({ summary: 'Actualizar el estado de una consulta' })
   @ApiBody({ schema: { example: { status: 'aprobado' } } })
   @ApiResponse({ status: 200, description: 'Estado actualizado correctamente' })
-  async updateStatus(@Param('id') id: string, @Body('status') status: string) {
+  async updateStatus(@Param('id') id: string, @Body('status') status: EstadoConsulta) {
     try {
       return await this.consultasService.updateConsultaStatus(id, status);
     } catch (error) {
@@ -115,23 +115,24 @@ export class ConsultasController {
   @ApiResponse({ status: 400, description: 'Error al aprobar el caso' })
   async approveCase(@Param('id') casoId: string, @Body() body: { status: string }) {
     if (body.status !== 'aprobado') {
-      throw new HttpException('El estado debe ser "aprobado', HttpStatus.BAD_REQUEST);
+      throw new HttpException('El estado debe ser "aprobado"', HttpStatus.BAD_REQUEST);
     }
-    return await this.consultasService.updateConsultaStatus(casoId, body.status);
+    return await this.consultasService.updateConsultaStatus(casoId, body.status as EstadoConsulta);
   }
 
-  // Endpoint para marcar un caso como notificado
   @Patch(':id/notificado')
   @ApiOperation({ summary: 'Marcar un caso como notificado' })
   @ApiParam({ name: 'id', description: 'ID del caso a notificar' })
   @ApiResponse({ status: 200, description: 'Caso notificado correctamente' })
   @ApiResponse({ status: 400, description: 'Error al marcar el caso como notificado' })
   async markAsNotified(@Param('id') casoId: string) {
-    return await this.consultasService.updateConsultaStatus(casoId, 'notificado');
+    return await this.consultasService.updateConsultaStatus(casoId, EstadoConsulta.NOTIFICADO);
   }
 
   @Post(':consultaId/upload')
   @UseInterceptors(FileInterceptor('file'))
+  @ApiOperation({ summary: 'Subir evidencia al caso' })
+  @ApiResponse({ status: 201, description: 'Evidencia subida correctamente' })
   async uploadEvidence(
     @Param('consultaId') consultaId: string,
     @UploadedFile() file: Express.Multer.File
@@ -144,19 +145,52 @@ export class ConsultasController {
     }
   }
 
+  @Patch(':consultaId/activar')
   @ApiOperation({ summary: 'Activar los casos asignados' })
-@ApiResponse({ status: 200, description: 'Activar casos asignados obtenidos correctamente' })
-@Patch(':consultaId/activar')
-async activateCase(@Param('consultaId') consultaId: string) {
-  return this.consultasService.activateCase(consultaId);
-}
+  @ApiResponse({ status: 200, description: 'Activar casos asignados obtenidos correctamente' })
+  async activateCase(@Param('consultaId') consultaId: string) {
+    return this.consultasService.activateCase(consultaId);
+  }
 
+  @Get('asignados/:abogadoId')
+  @ApiOperation({ summary: 'Obtener los casos asignados a un abogado' })
+  @ApiResponse({ status: 200, description: 'Casos asignados obtenidos correctamente' })
+  async getAssignedCases(@Param('abogadoId') abogadoId: string) {
+    return this.consultasService.getAssignedCases(abogadoId);
+  }
 
-// ConsultasController (Backend)
-@Get('asignados/:abogadoId')
-@ApiOperation({ summary: 'Obtener los casos asignados a un abogado' })
-@ApiResponse({ status: 200, description: 'Casos asignados obtenidos correctamente' })
-async getAssignedCases(@Param('abogadoId') abogadoId: string) {
-  return this.consultasService.getAssignedCases(abogadoId);
-}
+  @Patch(':id/comentarios')
+  @UseInterceptors(FileInterceptor('archivo'))
+  @ApiOperation({ summary: 'Agregar comentario con evidencia al caso' })
+  @ApiResponse({ status: 200, description: 'Comentario agregado correctamente' })
+  async addComentario(
+    @Param('id') id: string,
+    @Body('comentario') comentario: string,
+    @UploadedFile() archivo?: Express.Multer.File,
+  ) {
+    if (!comentario && !archivo) {
+      throw new HttpException('Debe enviar comentario o evidencia', HttpStatus.BAD_REQUEST);
+    }
+    return this.consultasService.addComentarioWithEvidence(id, comentario, archivo);
+  }
+
+  @Patch(':id/cerrar')
+  @ApiOperation({ summary: 'Cerrar un caso' })
+  @ApiParam({ name: 'id', description: 'ID del caso a cerrar' })
+  @ApiResponse({ status: 200, description: 'Caso cerrado correctamente' })
+  @ApiResponse({ status: 404, description: 'Caso no encontrado' })
+  @ApiResponse({ status: 400, description: 'El caso ya está cerrado' })
+  async closeCase(@Param('id') id: string) {
+    try {
+      return await this.consultasService.closeCase(id);
+    } catch (error) {
+      if (error.status && error.status === HttpStatus.NOT_FOUND) {
+        throw new HttpException(error.message, HttpStatus.NOT_FOUND);
+      }
+      if (error.status && error.status === HttpStatus.BAD_REQUEST) {
+        throw new HttpException(error.message, HttpStatus.BAD_REQUEST);
+      }
+      throw new HttpException('Error al cerrar el caso', HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+  }
 }

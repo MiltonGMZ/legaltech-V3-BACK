@@ -1,9 +1,25 @@
 import { IsNotEmpty, IsEmail, IsString, IsOptional, IsBoolean, IsDateString, IsEnum } from 'class-validator';
 
+export enum EstadoConsulta {
+  PENDIENTE = 'pendiente',
+  APROBADO = 'aprobado',
+  RECHAZADO = 'rechazado',
+  ACTIVO = 'activo',
+  RESUELTO = 'resuelto',
+  CERRADO = 'cerrado',
+  ASIGNADO = 'asignado',
+  NOTIFICADO = 'notificado',
+}
+
+export enum TipoConsulta {
+  PRECONSULTA = 'preconsulta',
+  CASO = 'caso',
+}
+
 export class CreatePreConsultaDto {
   @IsOptional()
   @IsString()
-  abogadoId: string;
+  abogadoId?: string;
 
   @IsNotEmpty()
   @IsString()
@@ -27,7 +43,7 @@ export class CreatePreConsultaDto {
 
   @IsNotEmpty()
   @IsDateString()
-  fechaNacimiento: string;  // Fecha en formato ISO 8601
+  fechaNacimiento: string;  // ISO 8601 string
 
   @IsNotEmpty()
   @IsString()
@@ -82,20 +98,21 @@ export class CreatePreConsultaDto {
   userId?: string;
 
   @IsOptional()
-  @IsString()
-  estado?: 'pendiente' | 'aprobado' | 'rechazado' | 'activo' | 'resuelto' | 'cerrado' | 'asignado';
+  @IsEnum(EstadoConsulta)
+  estado?: EstadoConsulta;
 
   @IsNotEmpty()
-  @IsString()
-  tipo: 'preconsulta' | 'caso';
+  @IsEnum(TipoConsulta)
+  tipo: TipoConsulta;
 
   @IsOptional()
   @IsString()
   responsableCaso?: string;
 
   @IsOptional()
-  @IsString()
+  @IsBoolean()
   notificado?: boolean;
 
-  fechaCreacion: Date;
+  @IsOptional()
+  fechaCreacion?: Date | string;
 }

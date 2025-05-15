@@ -113,11 +113,11 @@ export class ConsultasController {
   @ApiParam({ name: 'id', description: 'ID del caso a aprobar' })
   @ApiResponse({ status: 200, description: 'Caso aprobado correctamente' })
   @ApiResponse({ status: 400, description: 'Error al aprobar el caso' })
-  async approveCase(@Param('id') casoId: string, @Body() body: { status: string }) {
+  async approveCase(@Param('id') consultaId: string, @Body() body: { status: string }) {
     if (body.status !== 'aprobado') {
       throw new HttpException('El estado debe ser "aprobado"', HttpStatus.BAD_REQUEST);
     }
-    return await this.consultasService.updateConsultaStatus(casoId, body.status as EstadoConsulta);
+    return await this.consultasService.updateConsultaStatus(consultaId, body.status as EstadoConsulta);
   }
 
   @Patch(':id/notificado')
@@ -125,8 +125,8 @@ export class ConsultasController {
   @ApiParam({ name: 'id', description: 'ID del caso a notificar' })
   @ApiResponse({ status: 200, description: 'Caso notificado correctamente' })
   @ApiResponse({ status: 400, description: 'Error al marcar el caso como notificado' })
-  async markAsNotified(@Param('id') casoId: string) {
-    return await this.consultasService.updateConsultaStatus(casoId, EstadoConsulta.NOTIFICADO);
+  async markAsNotified(@Param('id') consultaId: string) {
+    return await this.consultasService.updateConsultaStatus(consultaId, EstadoConsulta.NOTIFICADO);
   }
 
   @Post(':consultaId/upload')
@@ -145,12 +145,21 @@ export class ConsultasController {
     }
   }
 
-  @Patch(':consultaId/activar')
-  @ApiOperation({ summary: 'Activar los casos asignados' })
-  @ApiResponse({ status: 200, description: 'Activar casos asignados obtenidos correctamente' })
-  async activateCase(@Param('consultaId') consultaId: string) {
-    return this.consultasService.activateCase(consultaId);
+ @Patch(':consultaId/activar')
+@ApiOperation({ summary: 'Activar un caso asignado' })
+@ApiResponse({ status: 200, description: 'Caso activado correctamente' })
+@ApiResponse({ status: 403, description: 'No autorizado' })
+@ApiResponse({ status: 400, description: 'Estado inválido' })
+async activateCase(
+  @Param('consultaId') consultaId: string,
+  @Body('abogadoId') abogadoId: string,
+) {
+  if (!abogadoId) {
+    throw new HttpException('El ID del abogado es requerido', HttpStatus.BAD_REQUEST);
   }
+  return this.consultasService.activateCase(consultaId, abogadoId);
+}
+
 
   @Get('asignados/:abogadoId')
   @ApiOperation({ summary: 'Obtener los casos asignados a un abogado' })

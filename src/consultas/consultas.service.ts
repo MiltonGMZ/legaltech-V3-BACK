@@ -96,9 +96,6 @@ async addComentarioWithEvidence(
   return { status: 'success', message: 'Comentario con evidencia agregado correctamente.' };
 }
 
-
-
-
   // Crear una nueva consulta
   async saveConsulta(createPreConsultaDto: CreatePreConsultaDto) {
     const consultasRef = this.firestore.collection('consultas');
@@ -172,8 +169,12 @@ async addComentarioWithEvidence(
 
   // Obtener consulta por ID
   async getConsultaById(consultaId: string) {
+  console.log('Buscando consulta con ID:', consultaId);
+
   const consultaRef = this.firestore.collection('consultas').doc(consultaId);
   const consultaSnapshot = await consultaRef.get();
+
+  console.log('Existe:', consultaSnapshot.exists);
 
   if (!consultaSnapshot.exists) {
     throw new HttpException('Consulta no encontrada', HttpStatus.NOT_FOUND);
@@ -184,10 +185,14 @@ async addComentarioWithEvidence(
   return {
     id: consultaSnapshot.id,
     ...data,
-    fechaCreacion: data?.fechaCreacion ? data.fechaCreacion.toDate() : null,
-    comentarios: data?.comentarios || [], 
+    fechaCreacion:
+      data?.fechaCreacion && typeof data.fechaCreacion.toDate === 'function'
+        ? data.fechaCreacion.toDate()
+        : null,
+    comentarios: data?.comentarios || [],
   };
 }
+
 
 
   async updateConsultaStatus(consultaId: string, status: EstadoConsulta) {
@@ -226,65 +231,68 @@ async addComentarioWithEvidence(
   
 
   async assignCase(consultaId: string, userId: string) {
-    if (!consultaId || !userId) {
-      throw new HttpException(
-        'El ID de la consulta y el ID del usuario son obligatorios',
-        HttpStatus.BAD_REQUEST,
-      );
-    }
-  
-    const consultaRef = this.firestore.collection('consultas').doc(consultaId);
-    const consultaSnapshot = await consultaRef.get();
-  
-    // Verificar si el caso ya está asignado
-    if (consultaSnapshot.data().abogadoId) {
-      throw new HttpException(
-        'Este caso ya tiene un abogado asignado',
-        HttpStatus.CONFLICT,
-      );
-    }
-  
-    if (!consultaSnapshot.exists) {
-      throw new HttpException(
-        `No se encontró el caso con ID ${consultaId}`,
-        HttpStatus.NOT_FOUND,
-      );
-    }
-  
-    // Obtener los detalles del abogado para incluir el fullName
-    const userRef = this.firestore.collection('users').doc(userId);
-    const userSnapshot = await userRef.get();
-  
-    if (!userSnapshot.exists) {
-      throw new HttpException(
-        `No se encontró el usuario con ID ${userId}`,
-        HttpStatus.NOT_FOUND,
-      );
-    }
-  
-    const abogado = userSnapshot.data();
-    if (!abogado || !abogado.fullName) {
-      throw new HttpException(
-        'El abogado no tiene un nombre completo registrado',
-        HttpStatus.NOT_FOUND,
-      );
-    }
-  
-    // Usar el método común para actualizar estado y fecha
-    await this.updateStateAndDate(consultaRef, 'asignado');
-  
-    // Actualizamos el responsable del caso
-    await consultaRef.update({
-      abogadoId: userId,
-      responsableCaso: abogado.fullName,
-      fechaAsignacion: Timestamp.now(),
-    });
-  
-    return {
-      status: 'success',
-      message: `El caso #${consultaId} ha sido asignado al abogado ${abogado.fullName}`,
-    };
+  if (!consultaId || !userId) {
+    throw new HttpException(
+      'El ID de la consulta y el ID del usuario son obligatorios',
+      HttpStatus.BAD_REQUEST,
+    );
   }
+
+  const consultaRef = this.firestore.collection('consultas').doc(consultaId);
+  const consultaSnapshot = await consultaRef.get();
+
+  if (!consultaSnapshot.exists) {
+    throw new HttpException(
+      `No se encontró el caso con ID ${consultaId}`,
+      HttpStatus.NOT_FOUND,
+    );
+  }
+
+  const consultaData = consultaSnapshot.data();
+
+  // Permitir reasignar solo si no hay abogado asignado o si es el mismo usuario
+  if (consultaData.abogadoId && consultaData.abogadoId !== userId) {
+    throw new HttpException(
+      'Este caso ya tiene un abogado asignado',
+      HttpStatus.CONFLICT,
+    );
+  }
+
+  // Obtener los detalles del abogado para incluir el fullName
+  const userRef = this.firestore.collection('users').doc(userId);
+  const userSnapshot = await userRef.get();
+
+  if (!userSnapshot.exists) {
+    throw new HttpException(
+      `No se encontró el usuario con ID ${userId}`,
+      HttpStatus.NOT_FOUND,
+    );
+  }
+
+  const abogado = userSnapshot.data();
+  if (!abogado || !abogado.fullName) {
+    throw new HttpException(
+      'El abogado no tiene un nombre completo registrado',
+      HttpStatus.NOT_FOUND,
+    );
+  }
+
+  // Actualizar estado a 'asignado' siempre (incluso si ya estaba asignado)
+  await this.updateStateAndDate(consultaRef, 'asignado');
+
+  // Actualizar responsable y abogadoId
+  await consultaRef.update({
+    abogadoId: userId,
+    responsableCaso: abogado.fullName,
+    fechaAsignacion: Timestamp.now(),
+  });
+
+  return {
+    status: 'success',
+    message: `El caso #${consultaId} ha sido asignado al abogado ${abogado.fullName}`,
+  };
+}
+
   
   
   private validateInput(consultaId: string, userId: string) {
@@ -330,37 +338,46 @@ async addComentarioWithEvidence(
     });
   }
 
-  async activateCase(consultaId: string) {
-    const consultaRef = this.firestore.collection('consultas').doc(consultaId);
-    const consultaSnapshot = await consultaRef.get();
+  async activateCase(consultaId: string, abogadoId: string) {
+  const consultaRef = this.firestore.collection('consultas').doc(consultaId);
+  const consultaSnapshot = await consultaRef.get();
 
-    if (!consultaSnapshot.exists) {
-      throw new HttpException(
-        `Consulta con ID ${consultaId} no encontrada`,
-        HttpStatus.NOT_FOUND,
-      );
-    }
-
-    // Verificamos si el caso ya está asignado
-    const caseData = consultaSnapshot.data();
-    if (caseData.estado !== 'asignado') {
-      throw new HttpException(
-        'El caso debe estar asignado antes de activarse',
-        HttpStatus.BAD_REQUEST,
-      );
-    }
-
-    // Cambiar el estado a 'activo'
-    await consultaRef.update({
-      estado: 'activo',
-      fechaActualizacion: currentTimestamp,
-    });
-
-    return {
-      status: 'success',
-      message: `El caso #${consultaId} ha sido activado y está siendo trabajado.`,
-    };
+  if (!consultaSnapshot.exists) {
+    throw new HttpException(
+      `Consulta con ID ${consultaId} no encontrada`,
+      HttpStatus.NOT_FOUND,
+    );
   }
+
+  const caseData = consultaSnapshot.data();
+
+  // Verificar que el abogado que intenta activar sea el asignado
+  if (caseData.abogadoId !== abogadoId) {
+    throw new HttpException(
+      'Solo el abogado asignado puede activar este caso',
+      HttpStatus.FORBIDDEN,
+    );
+  }
+
+  // Solo permitir activar si el caso está en estado 'asignado'
+  if (caseData.estado !== 'asignado') {
+    throw new HttpException(
+      `El caso debe estar en estado 'asignado' para activarse, estado actual: ${caseData.estado}`,
+      HttpStatus.BAD_REQUEST,
+    );
+  }
+
+  await consultaRef.update({
+    estado: 'activo',
+    fechaActualizacion: Timestamp.now(),
+  });
+
+  return {
+    status: 'success',
+    message: `El caso #${consultaId} ha sido activado correctamente.`,
+  };
+}
+
 
   // Método para rechazar un caso
   async rejectCase(consultaId: string) {

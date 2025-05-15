@@ -49,23 +49,26 @@ export class ConsultasService {
     return { message: `El caso #${consultaId} ha sido cerrado correctamente.` };
   }
 
-// Método común para actualizar el estado y la fecha de actualización
-private async updateStateAndDate(consultaRef: any, estado: string, tipo?: string) {
-  const currentTimestamp = Timestamp.now(); 
-  // Actualiza el estado y fecha de actualización
-  const updateData: any = {
+
+private async updateStateAndDate(
+  consultaRef: FirebaseFirestore.DocumentReference,
+  estado: string,
+  tipo?: string
+) {
+  const currentTimestamp = admin.firestore.Timestamp.now();
+
+  const updateData: { estado: string; fechaActualizacion: FirebaseFirestore.Timestamp; tipo?: string } = {
     estado,
     fechaActualizacion: currentTimestamp,
   };
 
-  // Si el tipo se proporciona (en el caso de 'aprobado'), actualizamos también el tipo
   if (tipo) {
     updateData.tipo = tipo;
   }
 
-  // Realizamos la actualización
   await consultaRef.update(updateData);
 }
+
 
 
 async addComentarioWithEvidence(
@@ -185,10 +188,12 @@ async addComentarioWithEvidence(
   return {
     id: consultaSnapshot.id,
     ...data,
-    fechaCreacion:
-      data?.fechaCreacion && typeof data.fechaCreacion.toDate === 'function'
-        ? data.fechaCreacion.toDate()
-        : null,
+    fechaCreacion: data?.fechaCreacion && typeof data.fechaCreacion.toDate === 'function'
+      ? data.fechaCreacion.toDate()
+      : null,
+    fechaActualizacion: data?.fechaActualizacion && typeof data.fechaActualizacion.toDate === 'function'
+      ? data.fechaActualizacion.toDate()
+      : null,
     comentarios: data?.comentarios || [],
   };
 }
@@ -221,6 +226,8 @@ async addComentarioWithEvidence(
       estado: status,
       fechaActualizacion: Timestamp.now(),
     });
+
+    await this.updateStateAndDate(consultaRef, status);
   
     return {
       status: 'success',
@@ -289,13 +296,12 @@ async addComentarioWithEvidence(
     fechaAsignacion: admin.firestore.Timestamp.now(),
   });
 
+  await this.updateStateAndDate(consultaRef, 'asignado');
   return {
     status: 'success',
     message: `El caso #${consultaId} ha sido asignado al abogado ${abogado.fullName}`,
   };
 }
-
-
   
   
   private validateInput(consultaId: string, userId: string) {
@@ -374,6 +380,8 @@ async addComentarioWithEvidence(
     estado: 'activo',
     fechaActualizacion: Timestamp.now(),
   });
+
+  await this.updateStateAndDate(consultaRef, 'activo');
 
   return {
     status: 'success',

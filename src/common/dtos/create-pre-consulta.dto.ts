@@ -112,7 +112,10 @@ export class CreatePreConsultaDto {
   @IsOptional()
   @IsBoolean()
   notificado?: boolean;
-
+  
   @IsOptional()
   fechaCreacion?: Date | string;
+
+   @IsOptional()
+  fechaActualizacion?: Date | string;
 }

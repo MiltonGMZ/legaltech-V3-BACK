@@ -71,33 +71,62 @@ private async updateStateAndDate(
 
 
 
+// En ConsultasService:
 async addComentarioWithEvidence(
-  caseId: string,
-  comentario: string,
-  file?: Express.Multer.File,
+  consultaId: string,
+  comentarioTexto: string,
+  archivo?: Express.Multer.File,
+  autorId?: string,
+  rol?: 'usuario' | 'abogado',
 ) {
-  const comentariosRef = this.firestore
-    .collection('consultas')
-    .doc(caseId)
-    .collection('comentarios');
+  const consultaRef = this.firestore.collection('consultas').doc(consultaId);
+  const consultaSnapshot = await consultaRef.get();
 
-  let evidenciaUrl: string | null = null;
-
-  if (file) {
-    // Subir archivo y obtener URL
-    evidenciaUrl = await this.fileUploadService.uploadFile(caseId, file);
+  if (!consultaSnapshot.exists) {
+    throw new HttpException('Consulta no encontrada', HttpStatus.NOT_FOUND);
   }
 
-  const nuevoComentario = {
-    texto: comentario,
-    evidenciaUrl,  // null si no hay archivo
-    fecha: admin.firestore.Timestamp.now(),
+  const consultaData = consultaSnapshot.data();
+
+  // Validar usuario autorizado: debe ser creador o abogado asignado
+  if (autorId !== consultaData.userId && autorId !== consultaData.abogadoId) {
+    throw new HttpException('No autorizado para comentar en este caso', HttpStatus.FORBIDDEN);
+  }
+
+  // Validar estado activo
+  if (consultaData.estado !== 'activo') {
+    throw new HttpException('No se puede comentar en un caso que no está activo', HttpStatus.BAD_REQUEST);
+  }
+
+  const comentario: any = {
+    texto: comentarioTexto,
+    fecha: new Date(),
+    autorId,
+    rol,
   };
 
-  await comentariosRef.add(nuevoComentario);
+  if (archivo) {
+    const bucket = this.firebaseService.getStorage().bucket();
+    const fileName = `evidencias/${consultaId}/${Date.now()}_${archivo.originalname}`;
 
-  return { status: 'success', message: 'Comentario con evidencia agregado correctamente.' };
+    await bucket.upload(archivo.path, {
+      destination: fileName,
+      metadata: { contentType: archivo.mimetype },
+    });
+
+    const fileUrl = `https://storage.googleapis.com/${bucket.name}/${fileName}`;
+    comentario.archivoUrl = fileUrl;
+  }
+
+  // Actualizar array de comentarios agregando nuevo comentario
+  await consultaRef.update({
+    comentarios: [...(consultaData.comentarios || []), comentario],
+    fechaActualizacion: new Date(),
+  });
+
+  return { message: 'Comentario agregado con éxito', comentario };
 }
+
 
   // Crear una nueva consulta
   async saveConsulta(createPreConsultaDto: CreatePreConsultaDto) {
@@ -199,43 +228,33 @@ async addComentarioWithEvidence(
 }
 
 
-
   async updateConsultaStatus(consultaId: string, status: EstadoConsulta) {
-    const consultaRef = this.firestore.collection('consultas').doc(consultaId);
-  
-    // Verifica si el estado es válido (esto ya está cubierto por el @IsEnum en el DTO)
-    const allowedStatuses = Object.values(EstadoConsulta);  // ['pendiente', 'aprobado', 'rechazado', 'activo', 'resuelto', 'cerrado', 'asignado']
-    if (!allowedStatuses.includes(status)) {
-      throw new HttpException(
-        `El estado "${status}" no es válido. Los estados permitidos son: ${allowedStatuses.join(', ')}`,
-        HttpStatus.BAD_REQUEST,
-      );
-    }
-  
-    // Obtener el documento para verificar si existe
-    const consultaSnapshot = await consultaRef.get();
-    if (!consultaSnapshot.exists) {
-      throw new HttpException(
-        `Consulta con ID ${consultaId} no encontrada`,
-        HttpStatus.NOT_FOUND,
-      );
-    }
-  
-    // Actualizar el estado
-    await consultaRef.update({
-      estado: status,
-      fechaActualizacion: Timestamp.now(),
-    });
+  const consultaRef = this.firestore.collection('consultas').doc(consultaId);
 
-    await this.updateStateAndDate(consultaRef, status);
-  
-    return {
-      status: 'success',
-      message: `El estado del caso #${consultaId} ha sido actualizado a ${status}.`,
-    };
+  const allowedStatuses = Object.values(EstadoConsulta);
+  if (!allowedStatuses.includes(status)) {
+    throw new HttpException(
+      `El estado "${status}" no es válido. Los estados permitidos son: ${allowedStatuses.join(', ')}`,
+      HttpStatus.BAD_REQUEST,
+    );
   }
-  
-  
+
+  const consultaSnapshot = await consultaRef.get();
+  if (!consultaSnapshot.exists) {
+    throw new HttpException(
+      `Consulta con ID ${consultaId} no encontrada`,
+      HttpStatus.NOT_FOUND,
+    );
+  }
+
+  // Usar la función común para actualizar estado y fecha
+  await this.updateStateAndDate(consultaRef, status);
+
+  return {
+    status: 'success',
+    message: `El estado del caso #${consultaId} ha sido actualizado a ${status}.`,
+  };
+}
 
  async assignCase(consultaId: string, userId: string) {
   if (!consultaId || !userId) {
@@ -303,34 +322,6 @@ async addComentarioWithEvidence(
   };
 }
   
-  
-  private validateInput(consultaId: string, userId: string) {
-    if (!consultaId || !userId) {
-      throw new HttpException('El ID de la consulta y el ID del usuario son obligatorios', HttpStatus.BAD_REQUEST);
-    }
-  }
-  
-  private async getDocument(ref: FirebaseFirestore.DocumentReference, entity: string, id: string) {
-    const snapshot = await ref.get();
-    if (!snapshot.exists) {
-      throw new HttpException(`${entity.charAt(0).toUpperCase() + entity.slice(1)} con ID ${id} no encontrada`, HttpStatus.NOT_FOUND);
-    }
-    return snapshot;
-  }
-  
-  private async getUser(userId: string) {
-    const userRef = this.firestore.collection('users').doc(userId);
-    const userSnapshot = await this.getDocument(userRef, 'usuario', userId);
-    const abogado = userSnapshot.data();
-    
-    if (!abogado?.fullName) {
-      throw new HttpException('El abogado no tiene un nombre completo registrado', HttpStatus.NOT_FOUND);
-    }
-  
-    return abogado;
-  }
-  
-
   async getAssignedCases(abogadoId: string) {
     const consultasRef = this.firestore.collection('consultas');
     const snapshot = await consultasRef

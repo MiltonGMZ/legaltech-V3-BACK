@@ -10,5 +10,6 @@ import { RolesModule } from 'src/roles/roles.module';
   imports: [FirebaseModule, RolesModule],
   providers: [AuthService, FirebaseService, RolesService],
   controllers: [AuthController],
+  exports: [AuthService],
 })
 export class AuthModule {}

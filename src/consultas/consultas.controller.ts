@@ -9,12 +9,17 @@ import {
   HttpStatus,
   UseInterceptors,
   UploadedFile,
+  HttpCode,
+  Req,
+  UseGuards,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBody, ApiParam } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiBody, ApiParam, ApiConsumes } from '@nestjs/swagger';
 import { ConsultasService } from './consultas.service';
 import { CreatePreConsultaDto, EstadoConsulta } from 'src/common/dtos/create-pre-consulta.dto';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { FirebaseService } from 'src/firebase/firebase.service';
+import { CreateComentarioDto } from 'src/common/dtos/create-comentario.dto';
+import { AuthGuard } from 'src/auth/guards/auth.guard';
 
 @ApiTags('Consultas Jurídicas')
 @Controller('consultas')
@@ -168,19 +173,37 @@ async activateCase(
     return this.consultasService.getAssignedCases(abogadoId);
   }
 
-  @Patch(':id/comentarios')
+   @Patch(':id/comentarios')
+  @UseGuards(AuthGuard)
   @UseInterceptors(FileInterceptor('archivo'))
-  @ApiOperation({ summary: 'Agregar comentario con evidencia al caso' })
-  @ApiResponse({ status: 200, description: 'Comentario agregado correctamente' })
+  @ApiOperation({ summary: 'Agregar comentario con evidencia a un caso' })
+  @ApiConsumes('multipart/form-data')
+  @ApiParam({ name: 'id', description: 'ID del caso' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        texto: { type: 'string' },
+        autorId: { type: 'string' },
+        rol: { type: 'string', enum: ['usuario', 'abogado'] },
+        archivo: {
+          type: 'string',
+          format: 'binary',
+          nullable: true,
+        },
+      },
+      required: ['texto', 'autorId', 'rol'],
+    },
+  })
+  @HttpCode(HttpStatus.OK)
   async addComentario(
     @Param('id') id: string,
-    @Body('comentario') comentario: string,
+    @Body() comentarioDto: CreateComentarioDto,
     @UploadedFile() archivo?: Express.Multer.File,
+    @Req() req?: any,
   ) {
-    if (!comentario && !archivo) {
-      throw new HttpException('Debe enviar comentario o evidencia', HttpStatus.BAD_REQUEST);
-    }
-    return this.consultasService.addComentarioWithEvidence(id, comentario, archivo);
+    // Aquí puedes obtener usuario logueado de req.user para validaciones
+    return this.consultasService.addComentarioWithEvidence(id, comentarioDto.texto, archivo, comentarioDto.autorId, comentarioDto.rol);
   }
 
   @Patch(':id/cerrar')

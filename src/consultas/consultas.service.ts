@@ -230,7 +230,7 @@ async addComentarioWithEvidence(
   
   
 
-  async assignCase(consultaId: string, userId: string) {
+ async assignCase(consultaId: string, userId: string) {
   if (!consultaId || !userId) {
     throw new HttpException(
       'El ID de la consulta y el ID del usuario son obligatorios',
@@ -258,18 +258,22 @@ async addComentarioWithEvidence(
     );
   }
 
-  // Obtener los detalles del abogado para incluir el fullName
-  const userRef = this.firestore.collection('users').doc(userId);
-  const userSnapshot = await userRef.get();
+  // Buscar usuario por el campo uid en lugar de usar doc(userId)
+  const userQuerySnapshot = await this.firestore
+    .collection('users')
+    .where('uid', '==', userId)
+    .get();
 
-  if (!userSnapshot.exists) {
+  if (userQuerySnapshot.empty) {
     throw new HttpException(
       `No se encontró el usuario con ID ${userId}`,
       HttpStatus.NOT_FOUND,
     );
   }
 
-  const abogado = userSnapshot.data();
+  const userDoc = userQuerySnapshot.docs[0];
+  const abogado = userDoc.data();
+
   if (!abogado || !abogado.fullName) {
     throw new HttpException(
       'El abogado no tiene un nombre completo registrado',
@@ -277,14 +281,12 @@ async addComentarioWithEvidence(
     );
   }
 
-  // Actualizar estado a 'asignado' siempre (incluso si ya estaba asignado)
-  await this.updateStateAndDate(consultaRef, 'asignado');
-
-  // Actualizar responsable y abogadoId
+  // Actualizar estado y datos del caso
   await consultaRef.update({
+    estado: 'asignado',
     abogadoId: userId,
     responsableCaso: abogado.fullName,
-    fechaAsignacion: Timestamp.now(),
+    fechaAsignacion: admin.firestore.Timestamp.now(),
   });
 
   return {
@@ -292,6 +294,7 @@ async addComentarioWithEvidence(
     message: `El caso #${consultaId} ha sido asignado al abogado ${abogado.fullName}`,
   };
 }
+
 
   
   

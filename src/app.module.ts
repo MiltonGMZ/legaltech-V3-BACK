@@ -13,6 +13,7 @@ import { MulterModule } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
 import { FileUploadModule } from './file-upload/file-upload.module';
 
+
 @Module({
   imports: [
     FirebaseModule, 
@@ -26,6 +27,7 @@ import { FileUploadModule } from './file-upload/file-upload.module';
      MulterModule.register({
       storage: memoryStorage(),
     }),
+     
   ],
   controllers: [
     AppController

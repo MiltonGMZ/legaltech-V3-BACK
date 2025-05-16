@@ -225,4 +225,25 @@ async activateCase(
       throw new HttpException('Error al cerrar el caso', HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
+
+  @Get(':id')
+  @ApiOperation({ summary: 'Obtener consulta por ID' })
+  @ApiParam({ name: 'id', description: 'ID de la consulta' })
+  @ApiResponse({ status: 200, description: 'Consulta encontrada correctamente' })
+  @ApiResponse({ status: 404, description: 'Consulta no encontrada' })
+  async getConsultaById(@Param('id') id: string) {
+    try {
+      const consulta = await this.consultasService.getConsultaById(id);
+      if (!consulta) {
+        throw new HttpException('Consulta no encontrada', HttpStatus.NOT_FOUND);
+      }
+      return consulta;
+    } catch (error) {
+      throw new HttpException(
+        error.message || 'Error al obtener la consulta',
+        error.status || HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
 }

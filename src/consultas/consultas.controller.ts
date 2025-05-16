@@ -207,24 +207,32 @@ async activateCase(
   }
 
   @Patch(':id/cerrar')
-  @ApiOperation({ summary: 'Cerrar un caso' })
-  @ApiParam({ name: 'id', description: 'ID del caso a cerrar' })
-  @ApiResponse({ status: 200, description: 'Caso cerrado correctamente' })
-  @ApiResponse({ status: 404, description: 'Caso no encontrado' })
-  @ApiResponse({ status: 400, description: 'El caso ya está cerrado' })
-  async closeCase(@Param('id') id: string) {
-    try {
-      return await this.consultasService.closeCase(id);
-    } catch (error) {
-      if (error.status && error.status === HttpStatus.NOT_FOUND) {
-        throw new HttpException(error.message, HttpStatus.NOT_FOUND);
-      }
-      if (error.status && error.status === HttpStatus.BAD_REQUEST) {
-        throw new HttpException(error.message, HttpStatus.BAD_REQUEST);
-      }
-      throw new HttpException('Error al cerrar el caso', HttpStatus.INTERNAL_SERVER_ERROR);
-    }
+@ApiOperation({ summary: 'Cerrar un caso' })
+@ApiParam({ name: 'id', description: 'ID del caso a cerrar' })
+@ApiResponse({ status: 200, description: 'Caso cerrado correctamente' })
+@ApiResponse({ status: 404, description: 'Caso no encontrado' })
+@ApiResponse({ status: 400, description: 'El caso ya está cerrado' })
+@ApiResponse({ status: 403, description: 'No autorizado' })
+@UseGuards(AuthGuard) 
+async closeCase(@Param('id') id: string, @Req() req: any) {
+  const user = req.user;
+  if (!user || user.role !== 'abogado') {
+    throw new HttpException('No autorizado para cerrar el caso', HttpStatus.FORBIDDEN);
   }
+
+  try {
+    return await this.consultasService.closeCase(id);
+  } catch (error) {
+    if (error.status && error.status === HttpStatus.NOT_FOUND) {
+      throw new HttpException(error.message, HttpStatus.NOT_FOUND);
+    }
+    if (error.status && error.status === HttpStatus.BAD_REQUEST) {
+      throw new HttpException(error.message, HttpStatus.BAD_REQUEST);
+    }
+    throw new HttpException('Error al cerrar el caso', HttpStatus.INTERNAL_SERVER_ERROR);
+  }
+}
+
 
   @Get(':id')
   @ApiOperation({ summary: 'Obtener consulta por ID' })

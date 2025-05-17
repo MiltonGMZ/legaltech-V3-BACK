@@ -173,39 +173,46 @@ async activateCase(
     return this.consultasService.getAssignedCases(abogadoId);
   }
 
-   @Patch(':id/comentarios')
-  @UseGuards(AuthGuard)
-  @UseInterceptors(FileInterceptor('archivo'))
-  @ApiOperation({ summary: 'Agregar comentario con evidencia a un caso' })
-  @ApiConsumes('multipart/form-data')
-  @ApiParam({ name: 'id', description: 'ID del caso' })
-  @ApiBody({
-    schema: {
-      type: 'object',
-      properties: {
-        texto: { type: 'string' },
-        autorId: { type: 'string' },
-        rol: { type: 'string', enum: ['usuario', 'abogado'] },
-        archivo: {
-          type: 'string',
-          format: 'binary',
-          nullable: true,
-        },
+  @Patch(':id/comentarios')
+@UseGuards(AuthGuard)
+@UseInterceptors(FileInterceptor('archivo')) // 'archivo' debe coincidir con el campo del form-data
+@ApiOperation({ summary: 'Agregar comentario con evidencia a un caso' })
+@ApiConsumes('multipart/form-data')
+@ApiParam({ name: 'id', description: 'ID del caso' })
+@ApiBody({
+  schema: {
+    type: 'object',
+    properties: {
+      texto: { type: 'string' },
+      autorId: { type: 'string' },
+      rol: { type: 'string', enum: ['usuario', 'abogado'] },
+      archivo: {
+        type: 'string',
+        format: 'binary',
+        nullable: true,
       },
-      required: ['texto', 'autorId', 'rol'],
     },
-  })
-  @HttpCode(HttpStatus.OK)
-  async addComentario(
-    @Param('id') id: string,
-    @Body() comentarioDto: CreateComentarioDto,
-    @UploadedFile() archivo?: Express.Multer.File,
-    @Req() req?: any,
-  ) {
-    // Aquí puedes obtener usuario logueado de req.user para validaciones
-    return this.consultasService.addComentarioWithEvidence(id, comentarioDto.texto, archivo, comentarioDto.autorId, comentarioDto.rol);
-  }
+    required: ['texto', 'autorId', 'rol'],
+  },
+})
+@HttpCode(HttpStatus.OK)
+async addComentario(
+  @Param('id') id: string,
+  @Body() comentarioDto: CreateComentarioDto,
+  @UploadedFile() archivo?: Express.Multer.File,
+  @Req() req?: any,
+) {
+  // Puedes validar usuario logueado con req.user para seguridad
+  return this.consultasService.addComentarioWithEvidence(
+    id,
+    comentarioDto.texto,
+    archivo,
+    comentarioDto.autorId,
+    comentarioDto.rol,
+  );
+}
 
+  
   @Patch(':id/cerrar')
 @ApiOperation({ summary: 'Cerrar un caso' })
 @ApiParam({ name: 'id', description: 'ID del caso a cerrar' })

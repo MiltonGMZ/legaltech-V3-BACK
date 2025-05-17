@@ -88,7 +88,7 @@ async addComentarioWithEvidence(
 
   const consultaData = consultaSnapshot.data();
 
-  // Validar usuario autorizado: debe ser creador o abogado asignado
+  // Validar usuario autorizado
   if (autorId !== consultaData.userId && autorId !== consultaData.abogadoId) {
     throw new HttpException('No autorizado para comentar en este caso', HttpStatus.FORBIDDEN);
   }
@@ -107,18 +107,22 @@ async addComentarioWithEvidence(
 
   if (archivo) {
     const bucket = this.firebaseService.getStorage().bucket();
-    const fileName = `evidencias/${consultaId}/${Date.now()}_${archivo.originalname}`;
+    const uniqueName = `${Date.now()}_${archivo.originalname}`;
+    const filePath = `evidencias/${consultaId}/${uniqueName}`;
+    const fileUpload = bucket.file(filePath);
 
-    await bucket.upload(archivo.path, {
-      destination: fileName,
+    // Subir usando buffer, no path
+    await fileUpload.save(archivo.buffer, {
       metadata: { contentType: archivo.mimetype },
     });
 
-    const fileUrl = `https://storage.googleapis.com/${bucket.name}/${fileName}`;
-    comentario.archivoUrl = fileUrl;
+    // Hacer público (opcional)
+    await fileUpload.makePublic();
+
+    comentario.archivoUrl = fileUpload.publicUrl();
   }
 
-  // Actualizar array de comentarios agregando nuevo comentario
+  // Actualizar array de comentarios
   await consultaRef.update({
     comentarios: [...(consultaData.comentarios || []), comentario],
     fechaActualizacion: new Date(),
@@ -126,6 +130,7 @@ async addComentarioWithEvidence(
 
   return { message: 'Comentario agregado con éxito', comentario };
 }
+
 
 
   // Crear una nueva consulta

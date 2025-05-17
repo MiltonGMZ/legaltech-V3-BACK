@@ -118,31 +118,31 @@ export class FirebaseService {
   }
 
   // Subir archivo a Firebase Storage
-  async uploadEvidence(file: Express.Multer.File, consultaId: string) {
-    const bucket = admin.storage().bucket(); // Usamos el bucket de Firebase Storage
-    const fileName = `evidencias/${consultaId}/${file.originalname}`;
-    
-    try {
-      // Subimos el archivo al bucket
-      const fileUpload = await bucket.upload(file.path, {
-        destination: fileName,
-        metadata: { contentType: file.mimetype },
-      });
+ async uploadEvidence(file: Express.Multer.File, consultaId: string) {
+  const bucket = this.storage.bucket();
+  const fileName = `evidencias/${consultaId}/${Date.now()}_${file.originalname}`;
+  const fileUpload = bucket.file(fileName);
 
-      // Guardamos la URL del archivo subido en Firestore
-      const fileUrl = `https://storage.googleapis.com/${bucket.name}/${fileName}`;
-      
-      // Actualizamos el documento con la URL de la evidencia
-      const consultaRef = this.firestore.collection('consultas').doc(consultaId);
-      await consultaRef.update({
-        evidencia: fileUrl,  // Guardamos la URL en la consulta
-      });
+  try {
+    await fileUpload.save(file.buffer, {
+      metadata: { contentType: file.mimetype },
+    });
 
-      return { message: 'Evidencia subida con éxito', fileUrl };
-    } catch (error) {
-      throw new HttpException('Error al subir la evidencia: ' + error.message, HttpStatus.BAD_REQUEST);
-    }
+    await fileUpload.makePublic();
+
+    const fileUrl = fileUpload.publicUrl();
+
+    const consultaRef = this.firestore.collection('consultas').doc(consultaId);
+    await consultaRef.update({
+      evidencia: fileUrl,
+    });
+
+    return { message: 'Evidencia subida con éxito', fileUrl };
+  } catch (error) {
+    throw new HttpException('Error al subir la evidencia: ' + error.message, HttpStatus.BAD_REQUEST);
   }
+}
+
   
   // Retornar la referencia de Firebase Storage
   getStorage(): admin.storage.Storage {

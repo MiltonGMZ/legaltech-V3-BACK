@@ -12,6 +12,7 @@ import { ChatModule } from './chat/chat.module';
 import { MulterModule } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
 import { FileUploadModule } from './file-upload/file-upload.module';
+import { CalendarModule } from './calendar/calendar.module';
 
 
 @Module({
@@ -27,6 +28,7 @@ import { FileUploadModule } from './file-upload/file-upload.module';
      MulterModule.register({
       storage: memoryStorage(),
     }),
+     CalendarModule,
      
   ],
   controllers: [

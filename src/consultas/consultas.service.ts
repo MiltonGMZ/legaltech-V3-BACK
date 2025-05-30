@@ -348,23 +348,15 @@ async addComentarioWithEvidence(
   const consultaSnapshot = await consultaRef.get();
 
   if (!consultaSnapshot.exists) {
-    throw new HttpException(
-      `Consulta con ID ${consultaId} no encontrada`,
-      HttpStatus.NOT_FOUND,
-    );
+    throw new HttpException(`Consulta con ID ${consultaId} no encontrada`, HttpStatus.NOT_FOUND);
   }
 
   const caseData = consultaSnapshot.data();
 
-  // Verificar que el abogado que intenta activar sea el asignado
   if (caseData.abogadoId !== abogadoId) {
-    throw new HttpException(
-      'Solo el abogado asignado puede activar este caso',
-      HttpStatus.FORBIDDEN,
-    );
+    throw new HttpException('Solo el abogado asignado puede activar este caso', HttpStatus.FORBIDDEN);
   }
 
-  // Solo permitir activar si el caso está en estado 'asignado'
   if (caseData.estado !== 'asignado') {
     throw new HttpException(
       `El caso debe estar en estado 'asignado' para activarse, estado actual: ${caseData.estado}`,
@@ -374,16 +366,15 @@ async addComentarioWithEvidence(
 
   await consultaRef.update({
     estado: 'activo',
-    fechaActualizacion: Timestamp.now(),
+    fechaActualizacion: admin.firestore.Timestamp.now(),
   });
-
-  await this.updateStateAndDate(consultaRef, 'activo');
 
   return {
     status: 'success',
     message: `El caso #${consultaId} ha sido activado correctamente.`,
   };
 }
+
 
 
   // Método para rechazar un caso

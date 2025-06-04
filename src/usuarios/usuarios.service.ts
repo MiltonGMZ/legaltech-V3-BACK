@@ -1,4 +1,4 @@
-import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
+import { HttpException, HttpStatus, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import { FirebaseService } from '../firebase/firebase.service';
 import { CreateUsuarioDto } from './dtos/create-usuario.dto';
 import { UpdateUsuarioDto } from './dtos/update-usuario.dto';
@@ -85,9 +85,28 @@ export class UsuariosService {
   
 
   async deleteUsuario(uid: string) {
-    await this.firebaseService.getFirestore().collection('users').doc(uid).delete();
-    return { message: 'Usuario eliminado correctamente' };
+  const firestore = this.firebaseService.getFirestore();
+  const usersCollection = firestore.collection('users');
+
+  // Buscar documentos donde el campo 'uid' sea igual al uid dado
+  const querySnapshot = await usersCollection.where('uid', '==', uid).get();
+
+  if (querySnapshot.empty) {
+    throw new NotFoundException(`El usuario con UID ${uid} no existe`);
   }
+
+  // Eliminar todos los documentos que coincidan (normalmente debería ser uno solo)
+  const batch = firestore.batch();
+  querySnapshot.forEach(doc => {
+    batch.delete(doc.ref);
+  });
+
+  await batch.commit();
+
+  return { message: 'Usuario eliminado correctamente' };
+}
+
+
 
   // Obtener abogados
   async getAbogados() {

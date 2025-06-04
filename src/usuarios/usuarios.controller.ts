@@ -45,6 +45,7 @@ updateUsuario(@Param('uid') uid: string, @Body() body: UpdateUsuarioDto) {
   @ApiParam({ name: 'uid', description: 'UID del usuario a eliminar' })
   @ApiResponse({ status: 200, description: 'Usuario eliminado' })
   deleteUsuario(@Param('uid') uid: string) {
+    console.log('UID Recibido:', uid);
     return this.usuariosService.deleteUsuario(uid);
   }
 

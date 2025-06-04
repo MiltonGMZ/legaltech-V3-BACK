@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Delete, Put, Body, Param, HttpException, HttpStatus } from '@nestjs/common';
+import { Controller, Get, Post, Delete, Put, Body, Param, HttpException, HttpStatus, BadRequestException } from '@nestjs/common';
 import { RolesService, RoleData } from './roles.service';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
 
@@ -19,16 +19,23 @@ export class RolesController {
   }
 
   @Post()
-  @ApiOperation({ summary: 'Crear un nuevo rol' })
-  @ApiResponse({ status: 201, description: 'Rol creado correctamente' })
-  @ApiResponse({ status: 400, description: 'Error al crear rol' })
-  async createRole(@Body() roleData: RoleData) {
-    try {
-      return await this.rolesService.createRole(roleData);
-    } catch (error) {
-      throw new HttpException(error.message, HttpStatus.BAD_REQUEST);
+@ApiOperation({ summary: 'Crear un nuevo rol' })
+@ApiResponse({ status: 201, description: 'Rol creado correctamente' })
+@ApiResponse({ status: 400, description: 'Error al crear rol' })
+async createRole(@Body() roleData: { name: string, permisos: string[] }) {
+  try {
+    // Verificar que roleData tenga los campos necesarios
+    if (!roleData || !roleData.name || !roleData.permisos || roleData.permisos.length === 0) {
+      throw new BadRequestException('El rol debe tener un nombre y al menos un permiso');
     }
+
+    return await this.rolesService.createRole(roleData);  // Llamar al servicio para crear el rol
+  } catch (error) {
+    console.error('Error al crear rol:', error);  // Agregar log para depurar
+    throw new HttpException(error.message, HttpStatus.BAD_REQUEST);
   }
+}
+
 
   @Delete(':role')
   @ApiOperation({ summary: 'Eliminar un rol por ID' })
@@ -46,21 +53,22 @@ export class RolesController {
 
   
   @Get(':role/permissions')
-  @ApiOperation({ summary: 'Obtener permisos de un rol específico' })
-  @ApiParam({ name: 'role', description: 'ID del rol para obtener los permisos' })
-  @ApiResponse({ status: 200, description: 'Permisos obtenidos correctamente' })
-  @ApiResponse({ status: 404, description: 'Rol no encontrado' })
-  async getRolePermissions(@Param('role') role: string) {
-    try {
-      const permissions = await this.rolesService.getRolePermissions(role);
-      if (!permissions || permissions.length === 0) {
-        throw new HttpException(`No se encontraron permisos para el rol con ID ${role}`, HttpStatus.NOT_FOUND);
-      }
-      return { id: role, permisos: permissions };
-    } catch (error) {
-      throw new HttpException(`Error al obtener permisos para el rol ${role}: ${error.message}`, HttpStatus.INTERNAL_SERVER_ERROR);
+@ApiOperation({ summary: 'Obtener permisos de un rol específico' })
+@ApiParam({ name: 'role', description: 'ID del rol para obtener los permisos' })
+@ApiResponse({ status: 200, description: 'Permisos obtenidos correctamente' })
+@ApiResponse({ status: 404, description: 'Rol no encontrado' })
+async getRolePermissions(@Param('role') role: string) {
+  try {
+    const permissions = await this.rolesService.getRolePermissions(role);
+    if (!permissions || permissions.length === 0) {
+      throw new HttpException(`No se encontraron permisos para el rol con ID ${role}`, HttpStatus.NOT_FOUND);
     }
+    return { id: role, permisos: permissions };
+  } catch (error) {
+    throw new HttpException(`Error al obtener permisos para el rol ${role}: ${error.message}`, HttpStatus.INTERNAL_SERVER_ERROR);
   }
+}
+
 
 
   // Endpoint para obtener los permisos asignados de un rol

@@ -138,31 +138,44 @@ async getAvailablePermissions(roleId: string): Promise<string[]> {
   }
 }
 
-
-
-async createRole(roleData: RoleData): Promise<{ message: string, id: string }> {
+async createRole(roleData: { name: string, permisos: string[] }): Promise<{ message: string }> {
   try {
-    if (!roleData.id) {
-      throw new BadRequestException('El rol debe tener un ID');
+    // Verificación de nombre y permisos
+    if (!roleData.name) {
+      throw new BadRequestException('El rol debe tener un nombre');
     }
 
-    
     if (!roleData.permisos || roleData.permisos.length === 0) {
-      const defaultPermissions = await this.getDefaultPermissionsForRole('usuario'); 
-      roleData.permisos = defaultPermissions;
+      throw new BadRequestException('El rol debe tener al menos un permiso');
     }
 
-    // Añadir el nuevo rol a la colección 'roles'
-    const newRole = await this.firebaseService.addDocument('roles', {
-      id: roleData.id,
+    // Verificar si el rol ya existe
+    const roleExists = await this.firebaseService.getFirestore()
+      .collection('roles')
+      .doc(roleData.name)
+      .get();
+    
+    if (roleExists.exists) {
+      throw new BadRequestException('Ya existe un rol con ese nombre');
+    }
+
+    // Crear el rol en Firestore
+    const newRoleRef = this.firebaseService.getFirestore()
+      .collection('roles')
+      .doc(roleData.name);
+
+    await newRoleRef.set({
       permisos: roleData.permisos,
     });
 
-    return { message: 'Rol creado exitosamente', id: newRole.docId };
+    return { message: 'Rol creado exitosamente' };
   } catch (error) {
-    throw new HttpException(`Error al crear rol: ${error.message}`, HttpStatus.INTERNAL_SERVER_ERROR);
+    console.error('Error al crear rol:', error);
+    throw new HttpException(`Error al crear rol: ${error.message}`, HttpStatus.BAD_REQUEST);
   }
 }
+
+
 
 // Método para obtener los permisos del rol 'usuario' como permisos por defecto
 async getDefaultPermissionsForRole(roleId: string): Promise<string[]> {

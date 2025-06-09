@@ -9,12 +9,55 @@ export class AuthService {
     private readonly firebaseService: FirebaseService,
     private readonly rolesService: RolesService,
   ) {
-    if (!admin.apps.length) {
-      admin.initializeApp({
-        credential: admin.credential.cert(process.env.FIREBASE_CONFIG_PATH),
-        databaseURL: process.env.FIREBASE_DATABASE_URL,
-      });
-    }
+   
+
+if (!admin.apps.length) {
+  const serviceAccount = {
+    project_id: "legaltechv2",
+    private_key_id: "053772f50762851009706dc0071986e8bf5351b3",
+    private_key: `-----BEGIN PRIVATE KEY-----
+MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQDhzJRHvm55oD1C
+hQ8BPOsuTghlL2KCObAmdi+GlAgOWHjJBroyAigELgGLiV+igLoEwOJMYTRs75p9
+Yg+AbG5pI4tGk1a9fsLJ0r9On5E608/CHuQFOfmHIbE50w9p+rNn10EMNnTg9u4q
+ljzHkESss4irY0MIJq/INGm1k00rqeKg8OSC4JxSzoyoQd4ESKxVTH55HUVog7M/
+JBvRe2GFO/X/8fsFdzEjuDBZyeIhkpcRjNj6FgwQ+41lkdOrEQOMK6tn9lBsmhmJ
+whmMIAxDv7AWg89VyK2nTvJXEaJJdvILq2ZlXZ2GKNCU6IElryeLqCTn41h9E+D7
+182dvQpFAgMBAAECggEACGhV8Brw4aH8DfVG4wCp8CIzMVNTm2469x+o8t2htCkK
+rE+OEM0gQNGWuKOflj0tT/5/nqDy8whz6+3CDoHbFZqfdbwIO4uUBLBOc8bAwVxA
+LOX6DxDC0AuK3hCUDxno4rmy4BnJ/dNr+FV6Q2MFj5mqwdjzFsNcAbwj4IEw2yqJ
+EGZxJpG5tPPTJkeq4beBFH7RXPcI1XUFo0f5Jft8CfIUzMaiSZcPzzz1sIMlvebh
+NJwAAX1xNlJiUCEgR353axorQn1CVhfw+cNGoGOvlb0KedZvOESzDO2T8GLVuvS7
+3rsAI6wsanRGavRu+lCpGm2pCJ6CFVZZ1jLRVfzjwQKBgQDwt6b3SI5vwHU9SleI
++LbLbTgYT624GLBSYgCHiPnYE2FC/5FSv2yshcq+iagXTTZq2hB7DDGuI6JN1TzM
+uDL/YSZvEST7SfY38gTqWZ3Y74NXV49DfrOxIob6Nj68I5zr6ffsjhptI8s+m8hD
+Pas/tUzs8mN41MOr6zW9/7d3hQKBgQDwInZtohZZFg6AHI0UMsp4mj/LBtpyiP0z
+P/MyuV9PBMpi+OI2DvsHTMebW/bbywlqdEINd2ecZeCDGLEXxhKBXiCa0VjxipL7
+4Hc/wVwLDXZqpTW9d1zQfye2ClhNeiy1ilVcjbdCd6RD0b+1PQ3oFxvigkfbr+0N
+OKOUG/3jwQKBgH2YNON81eR01DbgXP+4VReaqtP0br1JFGZHf+M3krQsmGiuk5JL
+ElaJkBkOFcfin2vszwCEgj9LlFlr0sc1rFYWyEjW9yatlmvmOK5Vh8gyX6LoqnUa
+3IKlcyuFtgHPywZEEvk3w44CSP8npLuAp6Mb40EVztSynk1K8cVqcL1JAoGBAJFU
+WhYpxZqu1aHFJcC2qIDq4XbPM/+jVpHgvx/QvpTFEnNpqwYKdPRLDHbC5pjIvW8W
+4y7hN+yYX5MXq3322xY+UD9CObEdK62SgLkuHbV2tVb/m5GKHrr0aaUrh5uEOHC6
+QsUb43AvllORKpPWWoc/DRo9vJ2BUFbzE1S8yCBBAoGAQW3rSPQBlA3K1LsjLGqS
+yyjWpXKwhHapWFN42zXrIGFmLMyL2GM/5uO64BW65CJmuxKC0MjtBqhQ6uUicdHd
+8ogrOHQwGqLRjqleDmHhalCtBmOemxYZWefXFGz6X2o/v3NEG6Ps/yuln81bPoDg
+EYLJWmtzxhBy/5jfskv089Q=
+-----END PRIVATE KEY-----`,
+    client_email: "firebase-adminsdk-fbsvc@legaltechv2.iam.gserviceaccount.com",
+    client_id: "101568004577036068456",
+    auth_uri: "https://accounts.google.com/o/oauth2/auth",
+    token_uri: "https://oauth2.googleapis.com/token",
+    auth_provider_x509_cert_url: "https://www.googleapis.com/oauth2/v1/certs",
+    client_x509_cert_url: "https://www.googleapis.com/robot/v1/metadata/x509/firebase-adminsdk-fbsvc%40legaltechv2.iam.gserviceaccount.com",
+    universe_domain: "googleapis.com"
+  };
+
+  admin.initializeApp({
+    credential: admin.credential.cert(serviceAccount as admin.ServiceAccount),
+    databaseURL: "https://legaltechv2.firebaseio.com",
+  });
+}
+
   }
 
   // Registrar un nuevo usuario

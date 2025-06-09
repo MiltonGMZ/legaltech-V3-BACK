@@ -17,7 +17,7 @@ async function bootstrap() {
 
   // Habilitar CORS
   app.enableCors({
-    origin: 'http://localhost:4200', // Permitir solicitudes desde el frontend en el puerto 4200
+    origin: ['https://legaltechv2.web.app', 'http://localhost:4200' ], // Permitir solicitudes desde el frontend en el puerto 4200
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
     allowedHeaders: 'Content-Type, Authorization',
   });
